@@ -1,10 +1,12 @@
 #define _GNU_SOURCE
 #include "task.h"
+#include <glob.h>
 #include <ncurses.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <glob.h>
+
+void clear_line() {}
 
 void display_tasks(Task *head, int selected_id, const char *search_query) {
   int row = 2;
@@ -19,7 +21,8 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
 
   attron(A_DIM);
   mvprintw(row++, 2, "ID  | Status | Priority | Project    | Title");
-  mvprintw(row++, 2, "----------------------------------------------------------");
+  mvprintw(row++, 2,
+           "----------------------------------------------------------");
   attroff(A_DIM);
 
   while (current != NULL) {
@@ -87,15 +90,20 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
 
   attron(A_DIM);
   mvprintw(LINES - 2, 2,
-           "j/k: nav, SPACE: done, d: del, a: add, e: edit, p: priority, o: open nvim, /: search, c: clear, q: quit");
+           "j/k: nav, SPACE: done, d: del, a: add, e: edit, p: priority, o: "
+           "open nvim, /: search, c: clear, q: quit");
   attroff(A_DIM);
 }
 
 Priority get_priority_input() {
-  mvprintw(LINES - 1, 0, "                                                                                ");
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
   mvprintw(LINES - 1, 2, "Select Priority (L: Low, M: Medium, H: High): ");
   int ch = getch();
-  mvprintw(LINES - 1, 0, "                                                                                ");
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
   if (ch == 'h' || ch == 'H')
     return HIGH;
   if (ch == 'l' || ch == 'L')
@@ -106,10 +114,14 @@ Priority get_priority_input() {
 void get_input(const char *prompt, char *buffer, int max_len) {
   echo();
   curs_set(1);
-  mvprintw(LINES - 1, 0, "                                                                                "); // Clear line
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             "); // Clear line
   mvprintw(LINES - 1, 2, "%s", prompt);
   getnstr(buffer, max_len - 1);
-  mvprintw(LINES - 1, 0, "                                                                                "); // Clear line
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             "); // Clear line
   noecho();
   curs_set(0);
 }
@@ -122,7 +134,9 @@ void get_path_input(const char *prompt, char *buffer, int max_len) {
   keypad(stdscr, TRUE);
 
   while (1) {
-    mvprintw(LINES - 1, 0, "                                                                                ");
+    mvprintw(LINES - 1, 0,
+             "                                                                 "
+             "               ");
     mvprintw(LINES - 1, 2, "%s%s", prompt, buffer);
     move(LINES - 1, 2 + strlen(prompt) + pos);
     refresh();
@@ -159,7 +173,9 @@ void get_path_input(const char *prompt, char *buffer, int max_len) {
           }
 
           if (g.gl_pathc > 1) {
-            mvprintw(LINES - 2, 0, "                                                                                ");
+            mvprintw(LINES - 2, 0,
+                     "                                                         "
+                     "                       ");
             int x = 2;
             for (size_t i = 0; i < g.gl_pathc && i < 6; i++) {
               char *name = strrchr(g.gl_pathv[i], '/');
@@ -177,7 +193,9 @@ void get_path_input(const char *prompt, char *buffer, int max_len) {
               mvprintw(LINES - 2, x, "...");
             refresh();
           } else {
-            mvprintw(LINES - 2, 0, "                                                                                ");
+            mvprintw(LINES - 2, 0,
+                     "                                                         "
+                     "                       ");
           }
         }
         globfree(&g);
@@ -188,8 +206,12 @@ void get_path_input(const char *prompt, char *buffer, int max_len) {
     }
   }
 
-  mvprintw(LINES - 1, 0, "                                                                                ");
-  mvprintw(LINES - 2, 0, "                                                                                ");
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
+  mvprintw(LINES - 2, 0,
+           "                                                                   "
+           "             ");
   curs_set(0);
 }
 
@@ -221,8 +243,8 @@ int main() {
   if (head == NULL) {
     add_task(&head, create_task(next_id++, "Learn C", "Master the basics",
                                 "General", ".", HIGH));
-    add_task(&head, create_task(next_id++, "Build TUI", "Use ncurses", "Kenzitui",
-                                ".", MEDIUM));
+    add_task(&head, create_task(next_id++, "Build TUI", "Use ncurses",
+                                "Kenzitui", ".", MEDIUM));
     add_task(&head, create_task(next_id++, "Add Persistence", "Save to file",
                                 "Kenzitui", ".", LOW));
   }
@@ -252,11 +274,15 @@ int main() {
         current = current->next;
       }
       if (current != NULL && current->path[0] != '\0') {
-        char command[MAX_PATH + 64];
+        char command[MAX_PATH + 128];
+        const char *win_name =
+            current->project[0] != '\0' ? current->project : "Task";
+
         if (getenv("TMUX")) {
-          snprintf(command, sizeof(command), "tmux new-window -n '%s' 'nvim %s'", 
-                   current->project[0] != '\0' ? current->project : "Task", 
-                   current->path);
+          snprintf(command, sizeof(command),
+                   "tmux select-window -t '%s' 2>/dev/null || tmux new-window "
+                   "-n '%s' 'nvim %s'",
+                   win_name, win_name, current->path);
           system(command);
         } else {
           def_prog_mode();
@@ -280,7 +306,8 @@ int main() {
       get_input("Project Name: ", project, MAX_PROJECT);
       get_path_input("Project Path: ", path, MAX_PATH);
       Priority priority = get_priority_input();
-      add_task(&head, create_task(next_id++, title, desc, project, path, priority));
+      add_task(&head,
+               create_task(next_id++, title, desc, project, path, priority));
       if (selected_id == 0 && head != NULL)
         selected_id = head->id;
       break;
