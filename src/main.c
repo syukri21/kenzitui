@@ -1,12 +1,12 @@
 #define _GNU_SOURCE
 #include "task.h"
+#include "tuiaction.h"
 #include <glob.h>
 #include <ncurses.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-void clear_line() {}
 
 void display_tasks(Task *head, int selected_id, const char *search_query) {
   int row = 2;
@@ -95,126 +95,6 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
   attroff(A_DIM);
 }
 
-Priority get_priority_input() {
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             ");
-  mvprintw(LINES - 1, 2, "Select Priority (L: Low, M: Medium, H: High): ");
-  int ch = getch();
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             ");
-  if (ch == 'h' || ch == 'H')
-    return HIGH;
-  if (ch == 'l' || ch == 'L')
-    return LOW;
-  return MEDIUM;
-}
-
-void get_input(const char *prompt, char *buffer, int max_len) {
-  echo();
-  curs_set(1);
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             "); // Clear line
-  mvprintw(LINES - 1, 2, "%s", prompt);
-  getnstr(buffer, max_len - 1);
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             "); // Clear line
-  noecho();
-  curs_set(0);
-}
-
-void get_path_input(const char *prompt, char *buffer, int max_len) {
-  int pos = strlen(buffer);
-  int ch;
-  curs_set(1);
-  noecho();
-  keypad(stdscr, TRUE);
-
-  while (1) {
-    mvprintw(LINES - 1, 0,
-             "                                                                 "
-             "               ");
-    mvprintw(LINES - 1, 2, "%s%s", prompt, buffer);
-    move(LINES - 1, 2 + strlen(prompt) + pos);
-    refresh();
-
-    ch = getch();
-
-    if (ch == '\n' || ch == '\r') {
-      break;
-    } else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
-      if (pos > 0) {
-        buffer[--pos] = '\0';
-      }
-    } else if (ch == '\t') {
-      glob_t g;
-      char pattern[MAX_PATH + 2];
-      snprintf(pattern, sizeof(pattern), "%s*", buffer);
-
-      if (glob(pattern, GLOB_TILDE | GLOB_MARK, NULL, &g) == 0) {
-        if (g.gl_pathc > 0) {
-          // Find longest common prefix
-          size_t prefix_len = strlen(g.gl_pathv[0]);
-          for (size_t i = 1; i < g.gl_pathc; i++) {
-            size_t j = 0;
-            while (j < prefix_len && g.gl_pathv[i][j] == g.gl_pathv[0][j]) {
-              j++;
-            }
-            prefix_len = j;
-          }
-
-          if (prefix_len < (size_t)max_len) {
-            strncpy(buffer, g.gl_pathv[0], prefix_len);
-            buffer[prefix_len] = '\0';
-            pos = prefix_len;
-          }
-
-          if (g.gl_pathc > 1) {
-            mvprintw(LINES - 2, 0,
-                     "                                                         "
-                     "                       ");
-            int x = 2;
-            for (size_t i = 0; i < g.gl_pathc && i < 6; i++) {
-              char *name = strrchr(g.gl_pathv[i], '/');
-              if (name && *(name + 1) != '\0')
-                name++;
-              else
-                name = g.gl_pathv[i];
-
-              mvprintw(LINES - 2, x, "%s ", name);
-              x += strlen(name) + 2;
-              if (x > COLS - 15)
-                break;
-            }
-            if (g.gl_pathc > 6)
-              mvprintw(LINES - 2, x, "...");
-            refresh();
-          } else {
-            mvprintw(LINES - 2, 0,
-                     "                                                         "
-                     "                       ");
-          }
-        }
-        globfree(&g);
-      }
-    } else if (ch >= 32 && ch <= 126 && pos < max_len - 1) {
-      buffer[pos++] = ch;
-      buffer[pos] = '\0';
-    }
-  }
-
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             ");
-  mvprintw(LINES - 2, 0,
-           "                                                                   "
-           "             ");
-  curs_set(0);
-}
-
 int main() {
   initscr();
   cbreak();
@@ -240,163 +120,23 @@ int main() {
   if (last_id > 0)
     next_id = last_id + 1;
 
-  if (head == NULL) {
-    add_task(&head, create_task(next_id++, "Learn C", "Master the basics",
-                                "General", ".", HIGH));
-    add_task(&head, create_task(next_id++, "Build TUI", "Use ncurses",
-                                "Kenzitui", ".", MEDIUM));
-    add_task(&head, create_task(next_id++, "Add Persistence", "Save to file",
-                                "Kenzitui", ".", LOW));
-  }
+  int selected_id = (head != NULL) ? head->id : 0;
+
+  TuiAction action;
+  action.head = &head;
+  action.selected_id = &selected_id;
+  action.next_id = &next_id;
+  action.search_query = search_query;
+  action.max_search_len = MAX_TITLE;
 
   int ch = 0;
-  int selected_id = (head != NULL) ? head->id : 0;
   while (ch != 'q') {
     clear();
     display_tasks(head, selected_id, search_query);
     refresh();
-    ch = getch();
 
-    switch (ch) {
-    case '/': {
-      get_input("Search (Title/Project): ", search_query, MAX_TITLE);
-      break;
-    }
-    case 'c': {
-      search_query[0] = '\0';
-      break;
-    }
-    case 'o': {
-      if (head == NULL || selected_id == 0)
-        break;
-      Task *current = head;
-      while (current != NULL && current->id != selected_id) {
-        current = current->next;
-      }
-      if (current != NULL && current->path[0] != '\0') {
-        char command[MAX_PATH + 128];
-        const char *win_name =
-            current->project[0] != '\0' ? current->project : "Task";
-
-        if (getenv("TMUX")) {
-          snprintf(command, sizeof(command),
-                   "tmux select-window -t '%s' 2>/dev/null || tmux new-window "
-                   "-n '%s' 'nvim %s'",
-                   win_name, win_name, current->path);
-          system(command);
-        } else {
-          def_prog_mode();
-          endwin();
-          printf("Not in tmux session. Opening nvim normally...\n");
-          snprintf(command, sizeof(command), "nvim %s", current->path);
-          system(command);
-          reset_prog_mode();
-          refresh();
-        }
-      }
-      break;
-    }
-    case 'a': {
-      char title[MAX_TITLE];
-      char desc[MAX_DESC];
-      char project[MAX_PROJECT];
-      char path[MAX_PATH] = "";
-      get_input("Task Title: ", title, MAX_TITLE);
-      get_input("Task Description: ", desc, MAX_DESC);
-      get_input("Project Name: ", project, MAX_PROJECT);
-      get_path_input("Project Path: ", path, MAX_PATH);
-      Priority priority = get_priority_input();
-      add_task(&head,
-               create_task(next_id++, title, desc, project, path, priority));
-      if (selected_id == 0 && head != NULL)
-        selected_id = head->id;
-      break;
-    }
-    case 'e': {
-      if (head == NULL || selected_id == 0)
-        break;
-      Task *current = head;
-      while (current != NULL && current->id != selected_id) {
-        current = current->next;
-      }
-      if (current != NULL) {
-        get_input("New Title: ", current->title, MAX_TITLE);
-        get_input("New Description: ", current->description, MAX_DESC);
-        get_input("New Project Name: ", current->project, MAX_PROJECT);
-        get_path_input("New Project Path: ", current->path, MAX_PATH);
-        current->priority = get_priority_input();
-      }
-      break;
-    }
-    case 'p': {
-      if (head == NULL || selected_id == 0)
-        break;
-      Task *current = head;
-      while (current != NULL && current->id != selected_id) {
-        current = current->next;
-      }
-      if (current != NULL) {
-        current->priority = (current->priority + 1) % 3;
-      }
-      break;
-    }
-    case 'j':
-    case KEY_DOWN: {
-      Task *current = head;
-      while (current != NULL && current->id != selected_id) {
-        current = current->next;
-      }
-      if (current != NULL && current->next != NULL) {
-        selected_id = current->next->id;
-      }
-      break;
-    }
-    case 'k':
-    case KEY_UP: {
-      if (head == NULL)
-        break;
-      if (head->id == selected_id)
-        break;
-      Task *current = head;
-      while (current->next != NULL && current->next->id != selected_id) {
-        current = current->next;
-      }
-      if (current != NULL) {
-        selected_id = current->id;
-      }
-      break;
-    }
-    case ' ':
-      mark_task_done(head, selected_id);
-      break;
-    case 'd': {
-      int old_id = selected_id;
-      Task *current = head;
-      Task *next_to_select = NULL;
-      if (head != NULL && head->id == old_id) {
-        next_to_select = head->next;
-      } else {
-        while (current != NULL && current->next != NULL &&
-               current->next->id != old_id) {
-          current = current->next;
-        }
-        if (current != NULL && current->next != NULL) {
-          next_to_select = current->next->next;
-          if (next_to_select == NULL)
-            next_to_select = current;
-        }
-      }
-      delete_task(&head, old_id);
-      if (next_to_select != NULL) {
-        selected_id = next_to_select->id;
-      } else if (head != NULL) {
-        selected_id = head->id;
-      } else {
-        selected_id = 0;
-      }
-      break;
-    }
-    }
+    action.ch = getch();
+    execute(&action);
   }
 
   save_tasks_to_file(head, "tasks.dat");

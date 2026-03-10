@@ -22,8 +22,8 @@ typedef struct Task {
 } Task;
 
 // Function prototypes
-Task *create_task(int id, const char *title, const char *desc, const char *project,
-                  const char *path, Priority priority);
+Task *create_task(int id, const char *title, const char *desc,
+                  const char *project, const char *path, Priority priority);
 void add_task(Task **head, Task *new_task);
 void mark_task_done(Task *head, int id);
 void delete_task(Task **head, int id);

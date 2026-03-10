@@ -153,12 +153,14 @@ Task *load_tasks_from_file(const char *filename, int *last_id) {
     token = strtok(NULL, ",");
     if (!token)
       continue;
+
     strncpy(title, token, MAX_TITLE - 1);
     title[MAX_TITLE - 1] = '\0';
 
     token = strtok(NULL, ",");
     if (!token)
       continue;
+
     strncpy(desc, token, MAX_DESC - 1);
     desc[MAX_DESC - 1] = '\0';
 
@@ -186,6 +188,7 @@ Task *load_tasks_from_file(const char *filename, int *last_id) {
 
     Task *new_task =
         create_task(id, title, desc, project, path, (Priority)priority);
+
     if (new_task) {
       new_task->is_done = (bool)is_done;
       add_task(&head, new_task);
