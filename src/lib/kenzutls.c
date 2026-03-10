@@ -1,5 +1,3 @@
-
-
 #define _GNU_SOURCE // Required for some environments like older glibc versions
                     // or Windows
 

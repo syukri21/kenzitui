@@ -4,16 +4,19 @@ LDFLAGS = -lncurses
 
 SRC_DIR = src
 INC_DIR = include
-OBJ_DIR = obj
+LIB_DIR = $(SRC_DIR)/lib
 BIN_DIR = bin
 
+OBJ_DIR = obj
+
 # Main application files
-SRC = src/main.c src/task.c src/kenzutls.c
-OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
+LIB = $(wildcard $(LIB_DIR)/*.c)
+SRC = src/main.c $(LIB)
 TARGET = $(BIN_DIR)/kenzitui
+OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
 # Test files
-TEST_SRC = src/task.c src/main_task_test.c src/kenzutls.c
+TEST_SRC = src/main_task_test.c
 TEST_TARGET = $(BIN_DIR)/test_task
 
 all: $(TARGET)
@@ -24,13 +27,16 @@ $(TARGET): $(OBJ) | $(BIN_DIR)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BIN_DIR) $(OBJ_DIR):
+$(BIN_DIR):
 	mkdir -p $@
+
+$(OBJ_DIR):
+	mkdir -p $@/lib
 
 # Target to build and run the task test
 test: $(TEST_SRC) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $(TEST_SRC) -o $(TEST_TARGET)
 	./$(TEST_TARGET)
+	$(CC) $(CFLAGS) $(TEST_SRC) $(SRC) -o $(TEST_TARGET)
 
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) compile_commands.json

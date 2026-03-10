@@ -10,8 +10,8 @@
 #include "kenzutls.h"
 #include "task.h"
 
-Task *create_task(int id, const char *title, const char *desc, const char *project,
-                  const char *path, Priority priority) {
+Task *create_task(int id, const char *title, const char *desc,
+                  const char *project, const char *path, Priority priority) {
   Task *new_task = (Task *)malloc(sizeof(Task));
   if (new_task == NULL)
     return NULL;
@@ -87,8 +87,9 @@ void delete_task(Task **head, int id) {
 void print_all_tasks(Task *head) {
   Task *current = head;
   while (current != NULL) {
-    printf("[%s] Task ID: %d | Priority: %d | Project: %s | Path: %s\n", current->is_done ? "x" : " ",
-           current->id, current->priority, current->project, current->path);
+    printf("[%s] Task ID: %d | Priority: %d | Project: %s | Path: %s\n",
+           current->is_done ? "x" : " ", current->id, current->priority,
+           current->project, current->path);
     printf("Title: %s\n", current->title);
     printf("Description: %s\n\n", current->description);
     current = current->next;
@@ -112,7 +113,8 @@ void save_tasks_to_file(Task *head, const char *filename) {
   Task *current = head;
   while (current != NULL) {
     fprintf(file, "%d,%s,%s,%s,%s,%d,%d\n", current->id, current->title,
-            current->description, current->project, current->path, current->is_done, current->priority);
+            current->description, current->project, current->path,
+            current->is_done, current->priority);
     current = current->next;
   }
 
@@ -144,38 +146,46 @@ Task *load_tasks_from_file(const char *filename, int *last_id) {
     char path[MAX_PATH];
 
     char *token = strtok(line, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     id = atoi(token);
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     strncpy(title, token, MAX_TITLE - 1);
     title[MAX_TITLE - 1] = '\0';
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     strncpy(desc, token, MAX_DESC - 1);
     desc[MAX_DESC - 1] = '\0';
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     strncpy(project, token, MAX_PROJECT - 1);
     project[MAX_PROJECT - 1] = '\0';
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     strncpy(path, token, MAX_PATH - 1);
     path[MAX_PATH - 1] = '\0';
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     is_done = atoi(token);
 
     token = strtok(NULL, ",");
-    if (!token) continue;
+    if (!token)
+      continue;
     priority = atoi(token);
 
-    Task *new_task = create_task(id, title, desc, project, path, (Priority)priority);
+    Task *new_task =
+        create_task(id, title, desc, project, path, (Priority)priority);
     if (new_task) {
       new_task->is_done = (bool)is_done;
       add_task(&head, new_task);
