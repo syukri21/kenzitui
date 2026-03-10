@@ -21,6 +21,8 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 
 ## 🚀 Getting Started
 
-1.  **Dependencies**: Install `libncurses5-dev` or `libncursesw5-dev`.
-2.  **Build**: Run `make` to compile.
-3.  **Run**: Execute `./bin/kenzitui`.
+1.  **Dependencies**: Install `libncurses-dev` (on Ubuntu/Debian).
+2.  **Build Main App**: Run `make` to compile.
+3.  **Run Main App**: Execute `./bin/kenzitui`.
+4.  **Run Tests**: Run `make test` to compile and execute the task logic tests.
+5.  **Clean**: Run `make clean` to remove build artifacts.

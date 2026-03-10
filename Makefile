@@ -7,9 +7,14 @@ INC_DIR = include
 OBJ_DIR = obj
 BIN_DIR = bin
 
-SRC = $(wildcard $(SRC_DIR)/*.c)
+# Main application files
+SRC = src/main.c src/task.c src/kenzutls.c
 OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 TARGET = $(BIN_DIR)/kenzitui
+
+# Test files
+TEST_SRC = src/task.c src/main_task_test.c src/kenzutls.c
+TEST_TARGET = $(BIN_DIR)/test_task
 
 all: $(TARGET)
 
@@ -22,7 +27,12 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+# Target to build and run the task test
+test: $(TEST_SRC) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $(TEST_SRC) -o $(TEST_TARGET)
+	./$(TEST_TARGET)
 
-.PHONY: all clean
+clean:
+	rm -rf $(OBJ_DIR) $(BIN_DIR) compile_commands.json
+
+.PHONY: all clean test
