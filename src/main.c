@@ -2,16 +2,16 @@
 #include <stdlib.h>
 
 int main() {
-    initscr();
-    raw();
-    keypad(stdscr, TRUE);
-    noecho();
+  initscr();
+  // raw();
+  // keypad(stdscr, TRUE);
+  noecho();
 
-    printw("Welcome to Kenzitui! (Press any key to exit)");
+  printw("Welcome to Kenzitui! (Press any key to exit)");
 
-    refresh();
-    getch();
-    endwin();
+  refresh();
+  getch();
+  endwin();
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
