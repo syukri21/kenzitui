@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Kenzitui Priority Helper",
+  "version": "0.1.0",
+  "description": "Quick priority buttons for Phabricator task forms.",
+  "host_permissions" : [
+    "*://p.cermati.com/*"
+  ],
+  "permissions": [
+    "cookies"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

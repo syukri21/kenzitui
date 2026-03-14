@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="popup.css" />
+    <script src="popup.js" type="module"></script>
+  </head>
+  <body>
+    <main class="popup">
+      <header class="header">
+        <h1>Kenzitui Helper</h1>
+        <p>Generate `.env` values from current domain cookies.</p>
+      </header>
+
+      <form id="control-row" class="form">
+        <label for="input">Domain</label>
+        <input type="text" id="input" placeholder="p.cermati.com" />
+        <button id="go" type="submit">Copy ENV to Clipboard</button>
+      </form>
+
+      <p id="message" class="message" hidden aria-live="polite"></p>
+      <footer class="footer">No data is sent anywhere.</footer>
+    </main>
+  </body>
+</html>
