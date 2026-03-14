@@ -66,6 +66,10 @@ Guidance for coding agents working in this repository.
   - CLI supports `fetch --id <id> --preview` without writing files
   - TUI `f` shows preview counts and requires confirmation before apply
 - Keep open-path command execution shell-safe (quote/escape user-controlled strings).
+- Keep open-path behavior stable:
+  - expand `~` task path to `$HOME`
+  - open nvim with task path as working directory
+  - in tmux, reuse existing pane for same path instead of opening duplicate windows
 - Keep backup behavior intact: saving tasks should refresh `tasks.dat.bak`.
 - Keep restore command working (`restore --from <backup>` copies backup to `tasks.dat`).
 - Avoid storing raw credentials in tracked files.

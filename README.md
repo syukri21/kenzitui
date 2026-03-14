@@ -28,6 +28,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Search**: Real-time filtering of tasks by title or project.
 - **Persistence**: Automatic saving/loading to `tasks.dat` with immediate autosave on mutating actions.
 - **Integrated Editor**: Open task project paths directly in Neovim (with Tmux support).
+- **Smart Open Reuse**: `o` reuses existing tmux pane when same project path is already open; otherwise opens a new tmux window at that path.
 - **Path Completion**: Tab-completion for file paths when adding/editing tasks.
 
 ## ⌨️ Keyboard Shortcuts
@@ -53,6 +54,11 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 
 Delete behavior:
 - `d` requires confirmation (`y/N`) before the task is removed.
+
+Open behavior (`o`):
+- Expands `~` / `~/...` task paths to `$HOME` before opening.
+- Opens Neovim with the task path as working directory.
+- In tmux, switches to an existing pane if that same path is already open; otherwise creates a new window.
 
 ## 🚀 Getting Started
 

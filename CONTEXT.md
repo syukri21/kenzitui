@@ -76,6 +76,8 @@ Owner username source order (for fetch filtering / board label):
 - `M`: move selected task to previous phase.
 - `d`: delete requires confirmation (`y/N`).
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
+- `o`: expands `~` path to `$HOME` and opens Neovim at task path as working directory.
+- In tmux, `o` reuses an existing pane if the same path is already open; otherwise it creates a new tmux window.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.
 
