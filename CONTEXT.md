@@ -49,6 +49,12 @@ Cookie source order:
 Use `env.example` as template for `.env`.
 Keep real cookies local and rotate them when expired or exposed.
 
+Owner username source order (for fetch filtering / board label):
+1. `KENZITUI_PHAB_USER` env var
+2. `PHAB_USER` env var
+3. `.env` (`KENZITUI_PHAB_USER=` or `PHAB_USER=`)
+4. fallback `USER`
+
 ## Known-Critical Parsing Behaviors
 - CSV loader preserves empty fields (`...,,...`) so column order remains stable.
 - `phase` and `points` are loaded correctly from `tasks.dat` even when `tags` or `next_sprint_meeting` are empty.

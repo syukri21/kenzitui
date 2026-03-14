@@ -94,6 +94,14 @@ Auth cookie source (in order):
   - `KENZITUI_PHAB_COOKIE=<cookie>`
   - `PHAB_COOKIE=<cookie>`
 
+Owner username source (used for fetch filtering + board label):
+- `KENZITUI_PHAB_USER` environment variable
+- `PHAB_USER` environment variable
+- `.env` file with either:
+  - `KENZITUI_PHAB_USER=<username>`
+  - `PHAB_USER=<username>`
+- fallback: current shell `USER`
+
 Quick setup:
 ```bash
 cp env.example .env

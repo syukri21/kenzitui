@@ -132,6 +132,61 @@ static char *extract_cookie_from_file(const char *path) {
   return NULL;
 }
 
+static char *extract_owner_from_file(const char *path) {
+  FILE *file = fopen(path, "r");
+  if (file == NULL) {
+    return NULL;
+  }
+
+  char line[4096];
+  while (fgets(line, sizeof(line), file) != NULL) {
+    if (line[0] == '#' || line[0] == '\n') {
+      continue;
+    }
+
+    if (strncmp(line, "KENZITUI_PHAB_USER=", 19) != 0 &&
+        strncmp(line, "PHAB_USER=", 10) != 0) {
+      continue;
+    }
+
+    char *eq = strchr(line, '=');
+    if (eq == NULL) {
+      continue;
+    }
+    char *value = eq + 1;
+    while (*value == ' ' || *value == '\t') {
+      value++;
+    }
+
+    remove_trailing_newline(value);
+    size_t len = strlen(value);
+    if (len >= 2 &&
+        ((value[0] == '"' && value[len - 1] == '"') ||
+         (value[0] == '\'' && value[len - 1] == '\''))) {
+      value[len - 1] = '\0';
+      value++;
+      len -= 2;
+    }
+
+    if (len == 0) {
+      continue;
+    }
+
+    char *owner = (char *)malloc(len + 1);
+    if (owner == NULL) {
+      fclose(file);
+      return NULL;
+    }
+    memcpy(owner, value, len);
+    owner[len] = '\0';
+    fclose(file);
+    return owner;
+  }
+
+  fclose(file);
+  return NULL;
+}
+
 static int extract_points_from_card_block(const char *anchor_start,
                                           const char *anchor_end) {
   if (anchor_start == NULL || anchor_end == NULL || anchor_end <= anchor_start) {
@@ -203,6 +258,30 @@ static char *load_cookie(const char *cookie_source_path) {
   }
 
   return extract_cookie_from_file(cookie_source_path);
+}
+
+static char *load_owner_username(const char *cookie_source_path) {
+  const char *owner_env = getenv("KENZITUI_PHAB_USER");
+  if (owner_env != NULL && owner_env[0] != '\0') {
+    return strdup(owner_env);
+  }
+  owner_env = getenv("PHAB_USER");
+  if (owner_env != NULL && owner_env[0] != '\0') {
+    return strdup(owner_env);
+  }
+
+  char *from_file = extract_owner_from_file(cookie_source_path);
+  if (from_file != NULL && from_file[0] != '\0') {
+    return from_file;
+  }
+  free(from_file);
+
+  owner_env = getenv("USER");
+  if (owner_env != NULL && owner_env[0] != '\0') {
+    return strdup(owner_env);
+  }
+
+  return NULL;
 }
 
 static char *fetch_dashboard_html(int sprint_id, const char *cookie) {
@@ -387,8 +466,8 @@ static int append_assigned_phid(AssignedPHID **items, size_t *count, size_t *cap
   return 1;
 }
 
-static int parse_assigned_phids(const char *html, AssignedPHID **out_items,
-                                size_t *out_count) {
+static int parse_assigned_phids(const char *html, const char *owner_username,
+                                AssignedPHID **out_items, size_t *out_count) {
   AssignedPHID *items = NULL;
   size_t count = 0;
   size_t cap = 0;
@@ -411,10 +490,11 @@ static int parse_assigned_phids(const char *html, AssignedPHID **out_items,
     phid[len] = '\0';
 
     const char *after = cursor + len;
-    if (strncmp(after, owner_prefix, strlen(owner_prefix)) == 0) {
+    if (owner_username != NULL &&
+        strncmp(after, owner_prefix, strlen(owner_prefix)) == 0) {
       const char *owner = after + strlen(owner_prefix);
-      if ((strncasecmp(owner, "syukri.khairi", 13) == 0 ||
-           strncasecmp(owner, "syukri.kahiri", 13) == 0) &&
+      size_t owner_len = strlen(owner_username);
+      if (strncasecmp(owner, owner_username, owner_len) == 0 &&
           !append_assigned_phid(&items, &count, &cap, phid)) {
         free(items);
         return 0;
@@ -777,15 +857,15 @@ static int parse_encoded_anchor_tasks(const char *html, ImportedTask **items,
   return 1;
 }
 
-static int parse_tasks_from_html(const char *html, ImportedTask **out_items,
-                                 size_t *out_count) {
+static int parse_tasks_from_html(const char *html, const char *owner_username,
+                                 ImportedTask **out_items, size_t *out_count) {
   ImportedTask *items = NULL;
   size_t count = 0;
   size_t cap = 0;
 
   AssignedPHID *phids = NULL;
   size_t phid_count = 0;
-  if (!parse_assigned_phids(html, &phids, &phid_count)) {
+  if (!parse_assigned_phids(html, owner_username, &phids, &phid_count)) {
     return 0;
   }
 
@@ -948,11 +1028,14 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
 
   ImportedTask *items = NULL;
   size_t count = 0;
-  if (!parse_tasks_from_html(html, &items, &count)) {
+  char *owner_username = load_owner_username(cookie_source_path);
+  if (!parse_tasks_from_html(html, owner_username, &items, &count)) {
     free(html);
+    free(owner_username);
     fprintf(stderr, "Failed to parse tasks from dashboard HTML.\n");
     return -1;
   }
+  free(owner_username);
   free(html);
 
   if (count == 0) {
@@ -1011,7 +1094,9 @@ int preview_fetch_sprint_tasks(int sprint_id, const char *output_path,
 
   ImportedTask *items = NULL;
   size_t count = 0;
-  int ok = parse_tasks_from_html(html, &items, &count);
+  char *owner_username = load_owner_username(cookie_source_path);
+  int ok = parse_tasks_from_html(html, owner_username, &items, &count);
+  free(owner_username);
   free(html);
   if (!ok || count == 0) {
     free(items);
@@ -1055,7 +1140,8 @@ int phab_merge_tasks_from_html_for_test(const char *html, int sprint_id,
 
   ImportedTask *items = NULL;
   size_t count = 0;
-  if (!parse_tasks_from_html(html, &items, &count) || count == 0) {
+  if (!parse_tasks_from_html(html, "syukri.khairi", &items, &count) ||
+      count == 0) {
     free(items);
     return 0;
   }
