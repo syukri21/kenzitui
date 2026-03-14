@@ -19,6 +19,8 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Task Management**: Add, edit, delete, and mark tasks as complete.
 - **Prioritization**: Assign **High**, **Medium**, or **Low** priority to tasks.
 - **Project Organization**: Group tasks by project names.
+- **Phabricator-Oriented Fields**: Track `phase`, `points`, `tags`, `ticket`, and `next sprint meeting`.
+- **Compact Board UI**: Border-first compact columns (`Backlog`, `Doing`, `Need CR`) with ticket + point visibility on each card.
 - **Search**: Real-time filtering of tasks by title or project.
 - **Persistence**: Automatic saving/loading to `tasks.dat`.
 - **Integrated Editor**: Open task project paths directly in Neovim (with Tmux support).
@@ -52,6 +54,36 @@ sudo apt install libncurses-dev
 1.  **Build**: Run `make` to compile.
 2.  **Run**: Execute `./bin/kenzitui`.
 3.  **Clean**: Run `make clean` to remove build artifacts.
+
+### 🔄 Fetch Sprint Tasks (Phabricator)
+Import sprint tasks directly into `tasks.dat`:
+```bash
+./bin/kenzitui fetch --id 3014
+```
+
+Auth cookie source (in order):
+- `KENZITUI_PHAB_COOKIE` environment variable
+- `PHAB_COOKIE` environment variable
+- `.env` file with either:
+  - `KENZITUI_PHAB_COOKIE=<cookie>`
+  - `PHAB_COOKIE=<cookie>`
+
+Quick setup:
+```bash
+cp env.example .env
+# then fill PHAB_COOKIE in .env
+```
+
+## 💾 Task Data Format
+`tasks.dat` rows use:
+`id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
+
+The loader remains backward-compatible with older 7-field task rows.
+It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, and `ticket` stay mapped correctly.
+
+## 📌 Fetch Notes
+- Sprint fetch maps tasks by assigned owner and preserves phase placement (e.g. `Doing` vs `Backlog`).
+- Points are read from the Phabricator workcard points tag and persisted into `tasks.dat`.
 
 ## 📂 Project Structure
 

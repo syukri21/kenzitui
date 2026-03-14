@@ -9,8 +9,11 @@ Guidance for coding agents working in this repository.
 - Purpose: terminal task manager with persistent storage in `tasks.dat`
 
 ## Repository Layout
-- `src/main.c`: application entry point and ncurses event loop
-- `src/lib/*.c`: task model, TUI actions, utility logic
+- `src/main.c`: CLI entry (`fetch`) + ncurses app loop
+- `src/lib/task.c`: task model + persistence (`tasks.dat`)
+- `src/lib/tui_render.c`: rendering layer for ncurses UI
+- `src/lib/tuiaction.c`: keyboard actions and input flows
+- `src/lib/phab_fetch.c`: Phabricator sprint fetch + parse
 - `include/*.h`: public headers and shared types
 - `docs/`: usage documentation
 - `bin/`: compiled executables
@@ -20,11 +23,12 @@ Guidance for coding agents working in this repository.
 - Build app: `make`
 - Run app: `./bin/kenzitui`
 - Clean artifacts: `make clean`
+- Fetch sprint tasks: `./bin/kenzitui fetch --id <sprint_id>`
 
 ## Testing
 - Existing test entry: `make test`
 - Note: current `test` target runs `./bin/test_task` before compiling it. If it fails on a clean tree, compile first with:
-  - `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/main.c src/lib/*.c -o bin/test_task -lncurses`
+  - `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/lib/*.c -o bin/test_task -lncurses`
 
 ## Coding Rules
 - Keep compatibility with GCC + C11.
@@ -34,19 +38,31 @@ Guidance for coding agents working in this repository.
 - Do not add new dependencies unless explicitly requested.
 
 ## Behavior and Data Safety
-- Keep task persistence format backward-compatible unless a migration is explicitly requested.
+- Keep task persistence loader backward-compatible with old rows.
+- Current `tasks.dat` format is:
+  - `id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
+- Preserve empty CSV fields while loading (`...,,...`) to avoid shifting `phase/points/tags/ticket`.
+- Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
 - Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.
+
+## Fetch Auth
+- Cookie source precedence:
+  1. `KENZITUI_PHAB_COOKIE` env var
+  2. `PHAB_COOKIE` env var
+  3. `.env` (`KENZITUI_PHAB_COOKIE=` or `PHAB_COOKIE=`)
+- `env.example` is the template. `.env` should remain local/untracked.
 
 ## Agent Workflow
 1. Inspect related headers and implementation files before editing.
 2. Apply minimal patch.
 3. Rebuild with `make`.
 4. Run relevant test command(s).
-5. Summarize changes and mention any remaining risks.
+5. If changing fetch/parser behavior, verify with `./bin/kenzitui fetch --id <sprint_id>` and inspect `tasks.dat` for phase/points.
+6. Summarize changes and mention any remaining risks.
 
 ## Out of Scope by Default
 - Rewriting architecture.
 - Renaming public structs/functions across the whole codebase.
-- Changing persistence format.
+- Breaking persistence backward compatibility.
 - Adding external libraries.

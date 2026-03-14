@@ -1,36 +1,53 @@
-# Kenzitui: Ncurses Task Manager (C Learning Project)
+# Kenzitui: Project Context
 
-A terminal-based project and task management tool built with C and ncurses. This project serves as a hands-on journey to mastering C programming while building a functional, efficient TUI.
+Kenzitui is a C11 + ncurses terminal task manager with persistence in `tasks.dat`.
+It now supports direct sprint import from Phabricator (`fetch --id <sprint_id>`).
 
-## 🎯 Project Goals
-- **Functional**: Manage tasks with titles, descriptions, due dates, and priorities.
-- **Persistent**: Save and load data from local files (JSON or custom binary format).
-- **Aesthetic**: A clean, responsive ncurses interface with keyboard shortcuts.
-- **Educational**: Deep dive into C memory management, pointers, and data structures.
+## Current Data Model
+Each task stores:
+- `id`
+- `name`
+- `description`
+- `project`
+- `path`
+- `is_done`
+- `priority`
+- `phase`
+- `points`
+- `tags`
+- `ticket`
+- `next_sprint_meeting`
 
-## 🛠 Tech Stack
-- **Language**: C (C11 standard)
-- **UI Library**: `ncurses` (for the terminal interface)
-- **Build System**: `Makefile`
-- **LSP**: `clangd` (configured in Neovim)
+Persistence format (`tasks.dat`):
+`id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
 
-## 📚 Learning Roadmap (C Milestones)
-1. **The Basics**: Variables, types, control flow, and basic `stdio`.
-2. **Memory Management**: Understanding the stack vs. heap, `malloc`, and `free`.
-3. **Pointers & Arrays**: Mastering the "scary" parts of C.
-4. **Structures (structs)**: Defining task and project data models.
-5. **File I/O**: Persisting task data to the disk.
-6. **Data Structures**: Implementing Linked Lists or Dynamic Arrays for task storage.
-7. **Ncurses**: Handling windows, colors, and real-time user input.
+Loader is backward-compatible with legacy 7-field rows.
 
-## 🚀 Initial Feature Set
-- [ ] Display a list of tasks.
-- [ ] Add/Edit/Delete tasks.
-- [ ] Mark tasks as complete.
-- [ ] Basic categorization (Projects).
-- [ ] Keyboard-driven navigation (Vim-like keys preferred).
+## Current Architecture
+- `src/main.c`: app entry; handles CLI mode (`fetch`) or starts ncurses UI.
+- `src/lib/task.c`: task CRUD + file load/save logic.
+- `src/lib/tuiaction.c`: key handling and add/edit/delete/search behavior.
+- `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`).
+- `src/lib/phab_fetch.c`: fetches and parses sprint workboard into `tasks.dat`.
 
-## 🛠 Development Commands
-- **Compile**: `make`
-- **Run**: `./kenzitui`
-- **Debug**: `gdb ./kenzitui`
+## Fetch Flow (Phabricator)
+Command:
+- `./bin/kenzitui fetch --id 3014`
+
+Cookie source order:
+1. `KENZITUI_PHAB_COOKIE` env var
+2. `PHAB_COOKIE` env var
+3. `.env` (`KENZITUI_PHAB_COOKIE=` or `PHAB_COOKIE=`)
+
+Use `env.example` as template for `.env`.
+
+## Known-Critical Parsing Behaviors
+- CSV loader preserves empty fields (`...,,...`) so column order remains stable.
+- `phase` and `points` are loaded correctly from `tasks.dat` even when `tags` or `next_sprint_meeting` are empty.
+- Fetch parser maps assigned tasks into the correct phase (including `Doing`) and fills `points` from workcard data.
+
+## Development Commands
+- Build: `make`
+- Run UI: `./bin/kenzitui`
+- Fetch sprint: `./bin/kenzitui fetch --id <sprint_id>`
+- Logic test: `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/lib/*.c -o bin/test_task -lncurses && ./bin/test_task`

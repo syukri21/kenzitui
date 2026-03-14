@@ -2,6 +2,7 @@
 #include "tuiaction.h"
 #include <glob.h>
 #include <ncurses.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -267,17 +268,32 @@ void execute(TuiAction *action) {
   }
 
   case ADD_KEY: {
-    char title[MAX_TITLE] = "";
+    char name[MAX_NAME] = "";
     char desc[MAX_DESC] = "";
     char project[MAX_PROJECT] = "";
     char path[MAX_PATH] = "";
-    tui_input("Task Title: ", title, MAX_TITLE);
+    char phase[MAX_PHASE] = "Backlog";
+    char tags[MAX_TAGS] = "";
+    char ticket[MAX_TICKET] = "";
+    char next_meeting[MAX_NEXT_MEETING] = "";
+    char points_buf[16] = "0";
+    tui_input("Task Name: ", name, MAX_NAME);
     tui_input("Task Description: ", desc, MAX_DESC);
     tui_input("Project Name: ", project, MAX_PROJECT);
     tui_get_path_input("Project Path: ", path, MAX_PATH);
+    tui_input("Phase: ", phase, MAX_PHASE);
+    tui_input("Points: ", points_buf, (int)sizeof(points_buf));
+    tui_input("Tags (| separated): ", tags, MAX_TAGS);
+    tui_input("Ticket (e.g. T148277): ", ticket, MAX_TICKET);
+    tui_input("Next Sprint Meeting: ", next_meeting, MAX_NEXT_MEETING);
     Priority priority = tui_get_priority_input();
-    add_task(action->head, create_task((*action->next_id)++, title, desc,
-                                       project, path, priority));
+    Task *task = create_task((*action->next_id)++, name, desc, project, path,
+                             priority);
+    if (task != NULL) {
+      task_set_phab_fields(task, phase, atoi(points_buf), tags, ticket,
+                           next_meeting);
+      add_task(action->head, task);
+    }
     if (*action->selected_id == 0 && *action->head != NULL)
       *action->selected_id = (*action->head)->id;
     break;
@@ -291,10 +307,19 @@ void execute(TuiAction *action) {
       current = current->next;
     }
     if (current != NULL) {
-      tui_input("New Title: ", current->title, MAX_TITLE);
+      char points_buf[16];
+      snprintf(points_buf, sizeof(points_buf), "%d", current->points);
+      tui_input("New Name: ", current->name, MAX_NAME);
       tui_input("New Description: ", current->description, MAX_DESC);
       tui_input("New Project Name: ", current->project, MAX_PROJECT);
       tui_get_path_input("New Project Path: ", current->path, MAX_PATH);
+      tui_input("New Phase: ", current->phase, MAX_PHASE);
+      tui_input("New Points: ", points_buf, (int)sizeof(points_buf));
+      current->points = atoi(points_buf);
+      tui_input("New Tags (| separated): ", current->tags, MAX_TAGS);
+      tui_input("New Ticket: ", current->ticket, MAX_TICKET);
+      tui_input("New Next Sprint Meeting: ", current->next_sprint_meeting,
+                MAX_NEXT_MEETING);
       current->priority = tui_get_priority_input();
     }
     break;
