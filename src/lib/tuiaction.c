@@ -197,17 +197,48 @@ static void show_status_message(const char *message) {
   refresh();
 }
 
-static int confirm_delete(void) {
+static int confirm_prompt(const char *prompt) {
   mvprintw(LINES - 1, 0,
            "                                                                   "
            "             ");
-  mvprintw(LINES - 1, 2, "Delete task? (y/N): ");
+  mvprintw(LINES - 1, 2, "%s", prompt != NULL ? prompt : "Confirm? (y/N): ");
   refresh();
   int ch = getch();
   mvprintw(LINES - 1, 0,
            "                                                                   "
            "             ");
   return (ch == 'y' || ch == 'Y');
+}
+
+static int shell_quote_single(const char *src, char *out, size_t out_size) {
+  if (src == NULL || out == NULL || out_size < 3) {
+    return 0;
+  }
+
+  size_t w = 0;
+  out[w++] = '\'';
+  for (size_t i = 0; src[i] != '\0'; i++) {
+    if (src[i] == '\'') {
+      if (w + 4 >= out_size) {
+        return 0;
+      }
+      out[w++] = '\'';
+      out[w++] = '\\';
+      out[w++] = '\'';
+      out[w++] = '\'';
+      continue;
+    }
+    if (w + 1 >= out_size) {
+      return 0;
+    }
+    out[w++] = src[i];
+  }
+  if (w + 1 >= out_size) {
+    return 0;
+  }
+  out[w++] = '\'';
+  out[w] = '\0';
+  return 1;
 }
 
 static void fetch_into_tui(TuiAction *action) {
@@ -228,6 +259,25 @@ static void fetch_into_tui(TuiAction *action) {
       (action->task_file != NULL && action->task_file[0] != '\0')
           ? action->task_file
           : "tasks.dat";
+
+  size_t fetched = 0;
+  size_t updated = 0;
+  size_t added = 0;
+  size_t kept = 0;
+  if (preview_fetch_sprint_tasks(sprint_id, task_file, ".env", &fetched, &updated,
+                                 &added, &kept) != 0) {
+    show_status_message("Preview failed. Check cookie in .env.");
+    return;
+  }
+
+  char prompt[160];
+  snprintf(prompt, sizeof(prompt),
+           "Preview f:%zu u:%zu a:%zu keep:%zu. Apply? (y/N): ", fetched,
+           updated, added, kept);
+  if (!confirm_prompt(prompt)) {
+    show_status_message("Fetch canceled.");
+    return;
+  }
 
   pid_t pid = fork();
   if (pid < 0) {
@@ -535,7 +585,7 @@ void execute(TuiAction *action) {
     break;
 
   case DELETE_KEY: {
-    if (!confirm_delete()) {
+    if (!confirm_prompt("Delete task? (y/N): ")) {
       show_status_message("Delete canceled.");
       break;
     }
@@ -678,21 +728,28 @@ void execute(TuiAction *action) {
       current = current->next;
     }
     if (current != NULL && current->path[0] != '\0') {
-      char command[MAX_PATH + 128];
+      char command[2048];
       const char *win_name =
           current->project[0] != '\0' ? current->project : "Task";
+      char q_path[(MAX_PATH * 5) + 8];
+      char q_win[(MAX_PROJECT * 5) + 8];
+      if (!shell_quote_single(current->path, q_path, sizeof(q_path)) ||
+          !shell_quote_single(win_name, q_win, sizeof(q_win))) {
+        show_status_message("Path/window name too long for shell escaping.");
+        break;
+      }
 
       if (getenv("TMUX")) {
         snprintf(command, sizeof(command),
-                 "tmux select-window -t '%s' 2>/dev/null || tmux new-window "
-                 "-n '%s' 'nvim %s'",
-                 win_name, win_name, current->path);
+                 "tmux select-window -t %s 2>/dev/null || tmux new-window "
+                 "-n %s nvim -- %s",
+                 q_win, q_win, q_path);
         system(command);
       } else {
         def_prog_mode();
         endwin();
         printf("Not in tmux session. Opening nvim normally...\n");
-        snprintf(command, sizeof(command), "nvim %s", current->path);
+        snprintf(command, sizeof(command), "nvim -- %s", q_path);
         system(command);
         reset_prog_mode();
         refresh();

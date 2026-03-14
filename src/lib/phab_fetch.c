@@ -847,6 +847,32 @@ static Task *find_task_by_id(Task *head, int id) {
   return NULL;
 }
 
+static size_t count_tasks(Task *head) {
+  size_t n = 0;
+  for (Task *current = head; current != NULL; current = current->next) {
+    n++;
+  }
+  return n;
+}
+
+static void compute_merge_counts(Task *existing_head, ImportedTask *items,
+                                 size_t imported_count, size_t *out_updated,
+                                 size_t *out_added, size_t *out_kept) {
+  size_t updated = 0;
+  for (size_t i = 0; i < imported_count; i++) {
+    if (find_task_by_id(existing_head, items[i].tid) != NULL) {
+      updated++;
+    }
+  }
+  size_t existing_total = count_tasks(existing_head);
+  size_t added = (imported_count >= updated) ? (imported_count - updated) : 0;
+  size_t kept = (existing_total >= updated) ? (existing_total - updated) : 0;
+
+  *out_updated = updated;
+  *out_added = added;
+  *out_kept = kept;
+}
+
 static int merge_imported_tasks_into_existing(ImportedTask *items, size_t count,
                                               int sprint_id, Task **head,
                                               size_t *updated, size_t *added) {
@@ -954,6 +980,52 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
 
   printf("Fetched %zu task(s): updated %zu, added %zu (kept non-Phab tasks) into %s\n",
          count, updated, added, output_path);
+  return 0;
+}
+
+int preview_fetch_sprint_tasks(int sprint_id, const char *output_path,
+                               const char *cookie_source_path,
+                               size_t *out_fetched, size_t *out_updated,
+                               size_t *out_added, size_t *out_kept) {
+  if (sprint_id <= 0 || output_path == NULL || cookie_source_path == NULL ||
+      out_fetched == NULL || out_updated == NULL || out_added == NULL ||
+      out_kept == NULL) {
+    return -1;
+  }
+
+  *out_fetched = 0;
+  *out_updated = 0;
+  *out_added = 0;
+  *out_kept = 0;
+
+  char *cookie = load_cookie(cookie_source_path);
+  if (cookie == NULL) {
+    return -1;
+  }
+
+  char *html = fetch_dashboard_html(sprint_id, cookie);
+  free(cookie);
+  if (html == NULL) {
+    return -1;
+  }
+
+  ImportedTask *items = NULL;
+  size_t count = 0;
+  int ok = parse_tasks_from_html(html, &items, &count);
+  free(html);
+  if (!ok || count == 0) {
+    free(items);
+    return -1;
+  }
+
+  int last_id = 0;
+  Task *existing = load_tasks_from_file(output_path, &last_id);
+  (void)last_id;
+  compute_merge_counts(existing, items, count, out_updated, out_added, out_kept);
+  *out_fetched = count;
+
+  free_all_tasks(existing);
+  free(items);
   return 0;
 }
 

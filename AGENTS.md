@@ -54,6 +54,10 @@ Guidance for coding agents working in this repository.
   - keep local non-Phabricator tasks untouched
   - never overwrite local `path` from fetch
   - preserve local `is_done` and `priority` on existing tasks
+- Keep fetch preview behavior stable:
+  - CLI supports `fetch --id <id> --preview` without writing files
+  - TUI `f` shows preview counts and requires confirmation before apply
+- Keep open-path command execution shell-safe (quote/escape user-controlled strings).
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
 - Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.

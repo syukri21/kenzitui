@@ -73,6 +73,15 @@ Import sprint tasks directly into `tasks.dat`:
 ./bin/kenzitui fetch --id 3014
 ```
 
+Preview merge impact (dry-run, no file changes):
+```bash
+./bin/kenzitui fetch --id 3014 --preview
+```
+
+In TUI (`f`):
+- shows preview counts first (`fetched/updated/added/kept`)
+- asks confirmation before applying.
+
 Auth cookie source (in order):
 - `KENZITUI_PHAB_COOKIE` environment variable
 - `PHAB_COOKIE` environment variable
@@ -90,6 +99,14 @@ Security notes for `.env`:
 - Never commit real cookies (`PHAB_COOKIE` / `KENZITUI_PHAB_COOKIE`) to git.
 - Keep `.env` local only and rotate cookie immediately if it was exposed.
 - If fetch starts failing with auth errors, refresh cookie from browser, update `.env`, and retry.
+
+## 🧰 Troubleshooting Fetch
+- `Fetch failed. Check cookie in .env.`:
+  - cookie is expired or invalid; refresh it from browser login and replace value in `.env`.
+- Preview works but apply canceled:
+  - in TUI, press `y` at preview prompt to continue, any other key cancels safely.
+- TUI fetch spinner running too long:
+  - press `ESC` to cancel current fetch process and keep current board unchanged.
 
 ## 💾 Task Data Format
 `tasks.dat` rows use:

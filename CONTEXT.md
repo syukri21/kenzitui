@@ -33,6 +33,7 @@ Loader is backward-compatible with legacy 7-field rows.
 ## Fetch Flow (Phabricator)
 Command:
 - `./bin/kenzitui fetch --id 3014`
+- Preview only (no write): `./bin/kenzitui fetch --id 3014 --preview`
 - In TUI: press `f`, input sprint ID.
 
 Cookie source order:
@@ -61,4 +62,5 @@ Keep real cookies local and rotate them when expired or exposed.
 - `m`: move selected task to next phase.
 - `M`: move selected task to previous phase.
 - `d`: delete requires confirmation (`y/N`).
+- `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.

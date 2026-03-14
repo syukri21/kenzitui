@@ -26,12 +26,34 @@ static int parse_fetch_id_arg(int argc, char **argv, int *out_id) {
   return 0;
 }
 
+static int has_flag(int argc, char **argv, const char *flag) {
+  for (int i = 2; i < argc; i++) {
+    if (strcmp(argv[i], flag) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   if (argc > 1 && strcmp(argv[1], "fetch") == 0) {
     int sprint_id = 0;
     if (!parse_fetch_id_arg(argc, argv, &sprint_id) || sprint_id <= 0) {
-      fprintf(stderr, "Usage: %s fetch --id <sprint_id>\n", argv[0]);
+      fprintf(stderr, "Usage: %s fetch --id <sprint_id> [--preview]\n", argv[0]);
       return EXIT_FAILURE;
+    }
+
+    if (has_flag(argc, argv, "--preview")) {
+      size_t fetched = 0, updated = 0, added = 0, kept = 0;
+      int rc = preview_fetch_sprint_tasks(sprint_id, "tasks.dat", ".env",
+                                          &fetched, &updated, &added, &kept);
+      if (rc != 0) {
+        fprintf(stderr, "Failed to preview fetch for sprint %d.\n", sprint_id);
+        return EXIT_FAILURE;
+      }
+      printf("Preview sprint %d: fetched=%zu updated=%zu added=%zu kept=%zu\n",
+             sprint_id, fetched, updated, added, kept);
+      return EXIT_SUCCESS;
     }
 
     int rc = fetch_sprint_tasks_to_file(sprint_id, "tasks.dat", ".env");
