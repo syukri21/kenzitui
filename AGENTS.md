@@ -13,8 +13,13 @@ Guidance for coding agents working in this repository.
 - `src/lib/app_config.c`: runtime config loader (`.kenzitui.conf`)
 - `src/lib/task.c`: task model + persistence (`tasks.dat`)
 - `src/lib/tui_render.c`: rendering layer for ncurses UI
-- `src/lib/tuiaction.c`: keyboard actions and input flows
+- `src/lib/tuiaction.c`: keyboard dispatcher only
+- `src/lib/actions_nav.c`: navigation actions
+- `src/lib/actions_task.c`: task actions (add/edit/delete/done/priority/move/open)
+- `src/lib/actions_fetch.c`: fetch action
+- `src/lib/input_ui.c`: user input/status helper functions
 - `src/lib/phab_fetch.c`: Phabricator sprint fetch + parse
+- `include/app_state.h`: central runtime state type for TUI mode
 - `include/*.h`: public headers and shared types
 - `docs/`: usage documentation
 - `bin/`: compiled executables
@@ -36,6 +41,7 @@ Guidance for coding agents working in this repository.
 - Preserve warning-free builds under `-Wall -Wextra -Werror`.
 - Follow existing style in nearby files (function naming, spacing, enum usage).
 - Prefer small, focused edits over broad refactors.
+- Keep action modules separated by responsibility; avoid re-growing a monolithic `tuiaction.c`.
 - Do not add new dependencies unless explicitly requested.
 
 ## Behavior and Data Safety

@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include "app_config.h"
+#include "app_state.h"
 #include "kenzutls.h"
 #include "phab_fetch.h"
 #include "task.h"
@@ -90,28 +91,26 @@ int main(int argc, char **argv) {
 
   init_tui_colors();
 
-  Task *head = NULL;
-  int next_id = 1;
-  int last_id = 0;
-  char search_query[MAX_TITLE] = "";
-  head = load_tasks_from_file("tasks.dat", &last_id);
-  if (last_id > 0)
-    next_id = last_id + 1;
+  AppState app = {0};
+  app.task_file = "tasks.dat";
+  app.search_query[0] = '\0';
 
-  int selected_id = (head != NULL) ? head->id : 0;
+  int last_id = 0;
+  app.head = load_tasks_from_file("tasks.dat", &last_id);
+  if (last_id > 0)
+    app.next_id = last_id + 1;
+  else
+    app.next_id = 1;
+
+  app.selected_id = (app.head != NULL) ? app.head->id : 0;
 
   TuiAction action;
-  action.head = &head;
-  action.selected_id = &selected_id;
-  action.next_id = &next_id;
-  action.search_query = search_query;
-  action.max_search_len = MAX_TITLE;
-  action.task_file = "tasks.dat";
+  action.state = &app;
 
   int ch = 0;
   while (ch != 'q') {
     clear();
-    display_tasks(head, selected_id, search_query);
+    display_tasks(app.head, app.selected_id, app.search_query);
     refresh();
 
     action.ch = getch();
@@ -119,8 +118,8 @@ int main(int argc, char **argv) {
     execute(&action);
   }
 
-  save_tasks_to_file(head, "tasks.dat");
-  free_all_tasks(head);
+  save_tasks_to_file(app.head, app.task_file);
+  free_all_tasks(app.head);
   endwin();
 
   return EXIT_SUCCESS;

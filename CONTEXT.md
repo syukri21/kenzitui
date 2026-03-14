@@ -27,7 +27,11 @@ Loader is backward-compatible with legacy 7-field rows.
 - `src/main.c`: app entry; handles CLI mode (`fetch`) or starts ncurses UI.
 - `src/lib/app_config.c`: loads `.kenzitui.conf` overrides for keys/colors/compact fields.
 - `src/lib/task.c`: task CRUD + file load/save logic.
-- `src/lib/tuiaction.c`: key handling, board-aware movement (`h/j/k/l`), phase move (`m`/`M`), and autosave on task mutations.
+- `src/lib/tuiaction.c`: dispatcher only (maps key -> action handler).
+- `src/lib/actions_nav.c`: board-aware movement (`h/j/k/l`).
+- `src/lib/actions_task.c`: task mutation actions (add/edit/delete/done/priority/move/open).
+- `src/lib/actions_fetch.c`: fetch preview + async/cancel apply + reload.
+- `src/lib/input_ui.c`: shared prompt/status/input UI helpers.
 - `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`) with per-column point totals in header (`P:<sum>`).
 - `src/lib/phab_fetch.c`: fetches and parses sprint workboard, then merges updates into `tasks.dat` (does not replace local-only tasks).
 
@@ -67,3 +71,8 @@ Keep real cookies local and rotate them when expired or exposed.
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.
+
+## Runtime State Model
+- `AppState` is the single source of truth for interactive mode:
+  - `head`, `selected_id`, `next_id`, `search_query`, `task_file`
+- `TuiAction` now carries only `ch` and `AppState*`, making action handlers simpler and easier to test.

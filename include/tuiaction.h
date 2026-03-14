@@ -1,6 +1,7 @@
 #ifndef TUIACTION_H
 #define TUIACTION_H
 
+#include "app_state.h"
 #include "task.h"
 #include <stdbool.h>
 
@@ -25,18 +26,7 @@
 
 typedef struct TuiAction {
   int ch;
-
-  // App State
-  Task **head;
-  int *selected_id;
-  int *next_id;
-
-  // Search data
-  int max_search_len;
-  char *search_query;
-
-  // Persistence target; when set, mutating actions can autosave.
-  const char *task_file;
+  AppState *state;
 } TuiAction;
 
 void execute(TuiAction *action);

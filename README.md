@@ -141,6 +141,11 @@ It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, an
 
 - `src/`: Core application logic and `main.c`.
 - `src/lib/`: Implementation of tasks, TUI actions, and utilities.
+  - `tuiaction.c`: action dispatcher only
+  - `actions_nav.c`: board navigation actions
+  - `actions_task.c`: add/edit/delete/done/priority/move/open actions
+  - `actions_fetch.c`: preview + async/cancel fetch action
+  - `input_ui.c`: prompt/status/input helpers
 - `include/`: Header files defining the data models and action systems.
 - `bin/`: Compiled executables.
 - `obj/`: Object files (.o).
@@ -151,4 +156,5 @@ It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, an
 The project uses a centralized action system:
 
 - **`Task`**: Doubly-linked list for task storage.
-- **`TuiAction`**: A unified structure that captures user input and application state, processed by a central `execute()` function. This keeps the `main` loop clean and allows for easy expansion of features.
+- **`AppState`**: Central runtime state (`head`, `selected_id`, `next_id`, `search_query`, `task_file`) passed through actions.
+- **`TuiAction`**: Lightweight event wrapper (`ch` + `AppState*`) processed by `execute()` dispatcher.
