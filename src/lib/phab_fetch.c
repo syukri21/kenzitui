@@ -836,12 +836,52 @@ static int parse_tasks_from_html(const char *html, ImportedTask **out_items,
   return 1;
 }
 
-static Task *build_task_list(ImportedTask *items, size_t count, int sprint_id) {
-  Task *head = NULL;
+static Task *find_task_by_id(Task *head, int id) {
+  Task *current = head;
+  while (current != NULL) {
+    if (current->id == id) {
+      return current;
+    }
+    current = current->next;
+  }
+  return NULL;
+}
+
+static int merge_imported_tasks_into_existing(ImportedTask *items, size_t count,
+                                              int sprint_id, Task **head,
+                                              size_t *updated, size_t *added) {
+  if (head == NULL) {
+    return 0;
+  }
+
   char project[MAX_PROJECT];
   snprintf(project, sizeof(project), "Sprint %d", sprint_id);
+  *updated = 0;
+  *added = 0;
 
   for (size_t i = 0; i < count; i++) {
+    Task *existing = find_task_by_id(*head, items[i].tid);
+    if (existing != NULL) {
+      // Keep user-managed local fields (path/is_done/priority) untouched;
+      // refresh only Phabricator-driven fields.
+      strncpy(existing->name, items[i].name, sizeof(existing->name) - 1);
+      existing->name[sizeof(existing->name) - 1] = '\0';
+
+      char desc[MAX_DESC];
+      snprintf(desc, sizeof(desc), "Imported from Phabricator T%d", items[i].tid);
+      sanitize_csv_field(desc);
+      strncpy(existing->description, desc, sizeof(existing->description) - 1);
+      existing->description[sizeof(existing->description) - 1] = '\0';
+
+      strncpy(existing->project, project, sizeof(existing->project) - 1);
+      existing->project[sizeof(existing->project) - 1] = '\0';
+
+      task_set_phab_fields(existing, items[i].phase, items[i].points, items[i].tags,
+                           items[i].ticket, items[i].next_sprint_meeting);
+      (*updated)++;
+      continue;
+    }
+
     char desc[MAX_DESC];
     snprintf(desc, sizeof(desc), "Imported from Phabricator T%d", items[i].tid);
     sanitize_csv_field(desc);
@@ -849,15 +889,15 @@ static Task *build_task_list(ImportedTask *items, size_t count, int sprint_id) {
     Task *task =
         create_task(items[i].tid, items[i].name, desc, project, "", MEDIUM);
     if (task == NULL) {
-      free_all_tasks(head);
-      return NULL;
+      return 0;
     }
     task_set_phab_fields(task, items[i].phase, items[i].points, items[i].tags,
                          items[i].ticket, items[i].next_sprint_meeting);
-    add_task(&head, task);
+    add_task(head, task);
+    (*added)++;
   }
 
-  return head;
+  return 1;
 }
 
 int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
@@ -895,17 +935,25 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
     return -1;
   }
 
-  Task *head = build_task_list(items, count, sprint_id);
-  free(items);
-  if (head == NULL) {
-    fprintf(stderr, "Failed to build imported task list.\n");
+  int last_id = 0;
+  Task *head = load_tasks_from_file(output_path, &last_id);
+  (void)last_id;
+  size_t updated = 0;
+  size_t added = 0;
+  if (!merge_imported_tasks_into_existing(items, count, sprint_id, &head, &updated,
+                                          &added)) {
+    free(items);
+    free_all_tasks(head);
+    fprintf(stderr, "Failed to merge imported task list.\n");
     return -1;
   }
+  free(items);
 
   save_tasks_to_file(head, output_path);
   free_all_tasks(head);
 
-  printf("Imported %zu task(s) into %s\n", count, output_path);
+  printf("Fetched %zu task(s): updated %zu, added %zu (kept non-Phab tasks) into %s\n",
+         count, updated, added, output_path);
   return 0;
 }
 

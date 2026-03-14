@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include "phab_fetch.h"
 #include "tuiaction.h"
 #include <glob.h>
 #include <ncurses.h>
@@ -184,6 +185,54 @@ static void persist_if_configured(TuiAction *action) {
     return;
   }
   save_tasks_to_file(*action->head, action->task_file);
+}
+
+static void show_status_message(const char *message) {
+  mvprintw(LINES - 2, 0,
+           "                                                                   "
+           "             ");
+  mvprintw(LINES - 2, 2, "%s", message != NULL ? message : "");
+  refresh();
+}
+
+static void fetch_into_tui(TuiAction *action) {
+  if (action == NULL || action->head == NULL || action->selected_id == NULL ||
+      action->next_id == NULL) {
+    return;
+  }
+
+  char sprint_buf[32] = "";
+  tui_input("Fetch Sprint ID: ", sprint_buf, (int)sizeof(sprint_buf));
+  int sprint_id = atoi(sprint_buf);
+  if (sprint_id <= 0) {
+    show_status_message("Invalid sprint ID.");
+    return;
+  }
+
+  const char *task_file =
+      (action->task_file != NULL && action->task_file[0] != '\0')
+          ? action->task_file
+          : "tasks.dat";
+
+  show_status_message("Fetching sprint data...");
+  int rc = fetch_sprint_tasks_to_file(sprint_id, task_file, ".env");
+  if (rc != 0) {
+    show_status_message("Fetch failed. Check cookie in .env.");
+    return;
+  }
+
+  int last_id = 0;
+  Task *loaded = load_tasks_from_file(task_file, &last_id);
+  if (loaded == NULL) {
+    show_status_message("Fetch done, but failed to reload tasks.dat.");
+    return;
+  }
+
+  free_all_tasks(*action->head);
+  *action->head = loaded;
+  *action->selected_id = loaded->id;
+  *action->next_id = (last_id > 0) ? (last_id + 1) : 1;
+  show_status_message("Fetch success. Board updated.");
 }
 
 static void extract_completion_name(const char *path, char *out, size_t out_len) {
@@ -386,6 +435,10 @@ void execute(TuiAction *action) {
   case CLEAR_SEARCH_KEY:
     if (action->search_query)
       action->search_query[0] = '\0';
+    break;
+
+  case FETCH_KEY:
+    fetch_into_tui(action);
     break;
 
   case NAV_DOWN_KEY:

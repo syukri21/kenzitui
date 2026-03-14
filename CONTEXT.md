@@ -28,11 +28,12 @@ Loader is backward-compatible with legacy 7-field rows.
 - `src/lib/task.c`: task CRUD + file load/save logic.
 - `src/lib/tuiaction.c`: key handling, board-aware movement (`h/j/k/l`), phase move (`m`/`M`), and autosave on task mutations.
 - `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`) with per-column point totals in header (`P:<sum>`).
-- `src/lib/phab_fetch.c`: fetches and parses sprint workboard into `tasks.dat`.
+- `src/lib/phab_fetch.c`: fetches and parses sprint workboard, then merges updates into `tasks.dat` (does not replace local-only tasks).
 
 ## Fetch Flow (Phabricator)
 Command:
 - `./bin/kenzitui fetch --id 3014`
+- In TUI: press `f`, input sprint ID.
 
 Cookie source order:
 1. `KENZITUI_PHAB_COOKIE` env var
@@ -45,6 +46,7 @@ Use `env.example` as template for `.env`.
 - CSV loader preserves empty fields (`...,,...`) so column order remains stable.
 - `phase` and `points` are loaded correctly from `tasks.dat` even when `tags` or `next_sprint_meeting` are empty.
 - Fetch parser maps assigned tasks into the correct phase (including `Doing`) and fills `points` from workcard data.
+- Fetch merge behavior keeps user-local configuration fields on existing tasks (`path`, `is_done`, `priority`) and refreshes Phabricator fields (`name`, `description`, `project`, `phase`, `points`, `tags`, `ticket`, `next_sprint_meeting`).
 
 ## Development Commands
 - Build: `make`

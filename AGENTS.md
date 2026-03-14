@@ -48,6 +48,11 @@ Guidance for coding agents working in this repository.
   - `m` moves phase forward, `M` moves phase backward.
 - Keep phase header totals accurate: top-right `P:<sum>` should match points of visible tasks in each column.
 - Keep autosave behavior on mutating actions (add/edit/delete/done/priority/phase move).
+- Keep fetch merge behavior stable:
+  - update/add fetched Phabricator tasks
+  - keep local non-Phabricator tasks untouched
+  - never overwrite local `path` from fetch
+  - preserve local `is_done` and `priority` on existing tasks
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
 - Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.

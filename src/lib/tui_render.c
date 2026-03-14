@@ -418,6 +418,6 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
   render_details(selected, detail_top, detail_h);
 
   print_trim(LINES - 1, 2, COLS - 4,
-             "h/l phase  j/k up-down  SPACE done  a add  e edit  d delete  p priority  m next-phase  M prev-phase  / search  c clear  o open  q quit",
+             "h/l phase  j/k up-down  SPACE done  f fetch  a add  e edit  d delete  p priority  m next-phase  M prev-phase  / search  c clear  o open  q quit",
              A_DIM, 5);
 }

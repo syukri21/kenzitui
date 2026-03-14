@@ -24,6 +24,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Phase Point Totals**: Each phase header shows total points (`P:<sum>`) at top-right.
 - **Board Navigation**: Vim-style board movement (`h/l` across phases, `j/k` within a phase column).
 - **Phase Move Hotkeys**: `m` moves selected task to next phase, `M` moves back to previous phase.
+- **In-TUI Fetch**: Press `f` to fetch a sprint and refresh the board without leaving TUI.
 - **Search**: Real-time filtering of tasks by title or project.
 - **Persistence**: Automatic saving/loading to `tasks.dat` with immediate autosave on mutating actions.
 - **Integrated Editor**: Open task project paths directly in Neovim (with Tmux support).
@@ -44,6 +45,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 | `p`       | Toggle Priority      |
 | `m`       | Move To Next Phase   |
 | `M`       | Move To Prev Phase   |
+| `f`       | Fetch Sprint In TUI  |
 | `/`       | Search Tasks         |
 | `c`       | Clear Search         |
 | `o`       | Open Path in Neovim  |
@@ -91,6 +93,8 @@ It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, an
 ## 📌 Fetch Notes
 - Sprint fetch maps tasks by assigned owner and preserves phase placement (e.g. `Doing` vs `Backlog`).
 - Points are read from the Phabricator workcard points tag and persisted into `tasks.dat`.
+- Fetch uses merge mode: it updates/adds fetched Phabricator tasks, while keeping non-Phabricator local tasks untouched.
+- Local task path is never overwritten by fetch (CLI or TUI); `path` remains local configuration.
 
 ## 📂 Project Structure
 

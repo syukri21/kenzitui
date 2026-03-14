@@ -9,6 +9,7 @@
 
 #define SEARCH_KEY '/'
 #define CLEAR_SEARCH_KEY 'c'
+#define FETCH_KEY 'f'
 #define ADD_KEY 'a'
 #define EDIT_KEY 'e'
 #define DELETE_KEY 'd'
