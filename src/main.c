@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
   action.next_id = &next_id;
   action.search_query = search_query;
   action.max_search_len = MAX_TITLE;
+  action.task_file = "tasks.dat";
 
   int ch = 0;
   while (ch != 'q') {

@@ -21,8 +21,10 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Project Organization**: Group tasks by project names.
 - **Phabricator-Oriented Fields**: Track `phase`, `points`, `tags`, `ticket`, and `next sprint meeting`.
 - **Compact Board UI**: Border-first compact columns (`Backlog`, `Doing`, `Need CR`) with ticket + point visibility on each card.
+- **Board Navigation**: Vim-style board movement (`h/l` across phases, `j/k` within a phase column).
+- **Phase Move Hotkeys**: `m` moves selected task to next phase, `M` moves back to previous phase.
 - **Search**: Real-time filtering of tasks by title or project.
-- **Persistence**: Automatic saving/loading to `tasks.dat`.
+- **Persistence**: Automatic saving/loading to `tasks.dat` with immediate autosave on mutating actions.
 - **Integrated Editor**: Open task project paths directly in Neovim (with Tmux support).
 - **Path Completion**: Tab-completion for file paths when adding/editing tasks.
 
@@ -30,13 +32,17 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 
 | Key       | Action               |
 | --------- | -------------------- |
-| `j` / `↓` | Navigate Down        |
-| `k` / `↑` | Navigate Up          |
+| `h` / `←` | Move To Left Phase   |
+| `l` / `→` | Move To Right Phase  |
+| `j` / `↓` | Move Down In Phase   |
+| `k` / `↑` | Move Up In Phase     |
 | `SPACE`   | Toggle Task Done     |
 | `a`       | Add New Task         |
 | `e`       | Edit Selected Task   |
 | `d`       | Delete Selected Task |
 | `p`       | Toggle Priority      |
+| `m`       | Move To Next Phase   |
+| `M`       | Move To Prev Phase   |
 | `/`       | Search Tasks         |
 | `c`       | Clear Search         |
 | `o`       | Open Path in Neovim  |

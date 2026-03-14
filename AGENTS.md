@@ -42,6 +42,11 @@ Guidance for coding agents working in this repository.
 - Current `tasks.dat` format is:
   - `id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
 - Preserve empty CSV fields while loading (`...,,...`) to avoid shifting `phase/points/tags/ticket`.
+- Keep board navigation behavior stable:
+  - `h/l` move across phase columns.
+  - `j/k` move within current phase column.
+  - `m` moves phase forward, `M` moves phase backward.
+- Keep autosave behavior on mutating actions (add/edit/delete/done/priority/phase move).
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
 - Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.

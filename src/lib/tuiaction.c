@@ -7,6 +7,185 @@
 #include <string.h>
 #include <unistd.h>
 
+#define MAX_NAV_TASKS 512
+
+typedef struct NavColumns {
+  Task *items[3][MAX_NAV_TASKS];
+  int counts[3];
+} NavColumns;
+
+static int nav_phase_to_column(const char *phase) {
+  if (phase == NULL) {
+    return 0;
+  }
+  if (strcasestr(phase, "doing") != NULL) {
+    return 1;
+  }
+  if (strcasestr(phase, "need") != NULL && strcasestr(phase, "cr") != NULL) {
+    return 2;
+  }
+  return 0;
+}
+
+static int nav_matches_search(const Task *task, const char *search_query) {
+  if (task == NULL) {
+    return 0;
+  }
+  if (search_query == NULL || search_query[0] == '\0') {
+    return 1;
+  }
+  return strcasestr(task->name, search_query) != NULL ||
+         strcasestr(task->project, search_query) != NULL ||
+         strcasestr(task->ticket, search_query) != NULL ||
+         strcasestr(task->tags, search_query) != NULL ||
+         strcasestr(task->phase, search_query) != NULL;
+}
+
+static void nav_build_columns(Task *head, const char *search_query,
+                              NavColumns *cols) {
+  memset(cols, 0, sizeof(*cols));
+  for (Task *current = head; current != NULL; current = current->next) {
+    if (!nav_matches_search(current, search_query)) {
+      continue;
+    }
+    int col = nav_phase_to_column(current->phase);
+    int idx = cols->counts[col];
+    if (idx < MAX_NAV_TASKS) {
+      cols->items[col][idx] = current;
+      cols->counts[col]++;
+    }
+  }
+}
+
+static int nav_find_selected(const NavColumns *cols, int selected_id, int *out_col,
+                             int *out_row) {
+  for (int c = 0; c < 3; c++) {
+    for (int r = 0; r < cols->counts[c]; r++) {
+      if (cols->items[c][r] != NULL && cols->items[c][r]->id == selected_id) {
+        *out_col = c;
+        *out_row = r;
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+static void nav_select_first_available(const NavColumns *cols, int *selected_id) {
+  for (int c = 0; c < 3; c++) {
+    if (cols->counts[c] > 0 && cols->items[c][0] != NULL) {
+      *selected_id = cols->items[c][0]->id;
+      return;
+    }
+  }
+  *selected_id = 0;
+}
+
+static void nav_move_vertical(TuiAction *action, int delta_row) {
+  if (action == NULL || action->head == NULL || action->selected_id == NULL) {
+    return;
+  }
+  NavColumns cols;
+  nav_build_columns(*action->head, action->search_query, &cols);
+
+  int col = 0;
+  int row = 0;
+  if (!nav_find_selected(&cols, *action->selected_id, &col, &row)) {
+    nav_select_first_available(&cols, action->selected_id);
+    return;
+  }
+
+  int next_row = row + delta_row;
+  if (next_row < 0 || next_row >= cols.counts[col]) {
+    return;
+  }
+  if (cols.items[col][next_row] != NULL) {
+    *action->selected_id = cols.items[col][next_row]->id;
+  }
+}
+
+static void nav_move_horizontal(TuiAction *action, int delta_col) {
+  if (action == NULL || action->head == NULL || action->selected_id == NULL) {
+    return;
+  }
+  NavColumns cols;
+  nav_build_columns(*action->head, action->search_query, &cols);
+
+  int col = 0;
+  int row = 0;
+  if (!nav_find_selected(&cols, *action->selected_id, &col, &row)) {
+    nav_select_first_available(&cols, action->selected_id);
+    return;
+  }
+
+  int target = col + delta_col;
+  if (target < 0 || target > 2 || cols.counts[target] <= 0) {
+    return;
+  }
+
+  if (row >= cols.counts[target]) {
+    row = cols.counts[target] - 1;
+  }
+  if (row < 0) {
+    row = 0;
+  }
+
+  if (cols.items[target][row] != NULL) {
+    *action->selected_id = cols.items[target][row]->id;
+  }
+}
+
+static void cycle_task_phase(Task *task) {
+  if (task == NULL) {
+    return;
+  }
+
+  if (strcasestr(task->phase, "doing") != NULL) {
+    strncpy(task->phase, "Need CR", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
+    return;
+  }
+
+  if (strcasestr(task->phase, "need") != NULL &&
+      strcasestr(task->phase, "cr") != NULL) {
+    strncpy(task->phase, "Backlog", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
+    return;
+  }
+
+  strncpy(task->phase, "Doing", sizeof(task->phase) - 1);
+  task->phase[sizeof(task->phase) - 1] = '\0';
+}
+
+static void cycle_task_phase_back(Task *task) {
+  if (task == NULL) {
+    return;
+  }
+
+  if (strcasestr(task->phase, "need") != NULL &&
+      strcasestr(task->phase, "cr") != NULL) {
+    strncpy(task->phase, "Doing", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
+    return;
+  }
+
+  if (strcasestr(task->phase, "doing") != NULL) {
+    strncpy(task->phase, "Backlog", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
+    return;
+  }
+
+  strncpy(task->phase, "Need CR", sizeof(task->phase) - 1);
+  task->phase[sizeof(task->phase) - 1] = '\0';
+}
+
+static void persist_if_configured(TuiAction *action) {
+  if (action == NULL || action->task_file == NULL || action->head == NULL) {
+    return;
+  }
+  save_tasks_to_file(*action->head, action->task_file);
+}
+
 static void extract_completion_name(const char *path, char *out, size_t out_len) {
   size_t len = strlen(path);
   int is_dir = 0;
@@ -211,32 +390,31 @@ void execute(TuiAction *action) {
 
   case NAV_DOWN_KEY:
   case KEY_DOWN: {
-    Task *current = *action->head;
-    while (current != NULL && current->id != *action->selected_id) {
-      current = current->next;
-    }
-    if (current != NULL && current->next != NULL) {
-      *action->selected_id = current->next->id;
-    }
+    nav_move_vertical(action, +1);
     break;
   }
 
   case NAV_UP_KEY:
   case KEY_UP: {
-    if (*action->head == NULL || (*action->head)->id == *action->selected_id)
-      break;
-    Task *current = *action->head;
-    while (current->next != NULL && current->next->id != *action->selected_id) {
-      current = current->next;
-    }
-    if (current != NULL) {
-      *action->selected_id = current->id;
-    }
+    nav_move_vertical(action, -1);
+    break;
+  }
+
+  case NAV_LEFT_KEY:
+  case KEY_LEFT: {
+    nav_move_horizontal(action, -1);
+    break;
+  }
+
+  case NAV_RIGHT_KEY:
+  case KEY_RIGHT: {
+    nav_move_horizontal(action, +1);
     break;
   }
 
   case DONE_KEY:
     mark_task_done(*action->head, *action->selected_id);
+    persist_if_configured(action);
     break;
 
   case DELETE_KEY: {
@@ -264,6 +442,7 @@ void execute(TuiAction *action) {
     } else {
       *action->selected_id = 0;
     }
+    persist_if_configured(action);
     break;
   }
 
@@ -296,6 +475,7 @@ void execute(TuiAction *action) {
     }
     if (*action->selected_id == 0 && *action->head != NULL)
       *action->selected_id = (*action->head)->id;
+    persist_if_configured(action);
     break;
   }
 
@@ -321,6 +501,7 @@ void execute(TuiAction *action) {
       tui_input("New Next Sprint Meeting: ", current->next_sprint_meeting,
                 MAX_NEXT_MEETING);
       current->priority = tui_get_priority_input();
+      persist_if_configured(action);
     }
     break;
   }
@@ -334,6 +515,35 @@ void execute(TuiAction *action) {
     }
     if (current != NULL) {
       current->priority = (current->priority + 1) % 3;
+      persist_if_configured(action);
+    }
+    break;
+  }
+
+  case MOVE_KEY: {
+    if (*action->head == NULL || *action->selected_id == 0)
+      break;
+    Task *current = *action->head;
+    while (current != NULL && current->id != *action->selected_id) {
+      current = current->next;
+    }
+    if (current != NULL) {
+      cycle_task_phase(current);
+      persist_if_configured(action);
+    }
+    break;
+  }
+
+  case MOVE_BACK_KEY: {
+    if (*action->head == NULL || *action->selected_id == 0)
+      break;
+    Task *current = *action->head;
+    while (current != NULL && current->id != *action->selected_id) {
+      current = current->next;
+    }
+    if (current != NULL) {
+      cycle_task_phase_back(current);
+      persist_if_configured(action);
     }
     break;
   }

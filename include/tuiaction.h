@@ -13,10 +13,14 @@
 #define EDIT_KEY 'e'
 #define DELETE_KEY 'd'
 #define PRIORITY_KEY 'p'
+#define MOVE_KEY 'm'
+#define MOVE_BACK_KEY 'M'
 #define OPEN_KEY 'o'
 #define DONE_KEY ' '
+#define NAV_LEFT_KEY 'h'
 #define NAV_UP_KEY 'k'
 #define NAV_DOWN_KEY 'j'
+#define NAV_RIGHT_KEY 'l'
 
 typedef struct TuiAction {
   int ch;
@@ -29,6 +33,9 @@ typedef struct TuiAction {
   // Search data
   int max_search_len;
   char *search_query;
+
+  // Persistence target; when set, mutating actions can autosave.
+  const char *task_file;
 } TuiAction;
 
 void execute(TuiAction *action);

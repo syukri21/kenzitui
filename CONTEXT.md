@@ -26,7 +26,7 @@ Loader is backward-compatible with legacy 7-field rows.
 ## Current Architecture
 - `src/main.c`: app entry; handles CLI mode (`fetch`) or starts ncurses UI.
 - `src/lib/task.c`: task CRUD + file load/save logic.
-- `src/lib/tuiaction.c`: key handling and add/edit/delete/search behavior.
+- `src/lib/tuiaction.c`: key handling, board-aware movement (`h/j/k/l`), phase move (`m`/`M`), and autosave on task mutations.
 - `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`).
 - `src/lib/phab_fetch.c`: fetches and parses sprint workboard into `tasks.dat`.
 
@@ -51,3 +51,10 @@ Use `env.example` as template for `.env`.
 - Run UI: `./bin/kenzitui`
 - Fetch sprint: `./bin/kenzitui fetch --id <sprint_id>`
 - Logic test: `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/lib/*.c -o bin/test_task -lncurses && ./bin/test_task`
+
+## Current Interaction Model
+- `h/l`: move selection across phase columns.
+- `j/k`: move selection within the current phase column.
+- `m`: move selected task to next phase.
+- `M`: move selected task to previous phase.
+- Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
