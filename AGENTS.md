@@ -27,7 +27,6 @@ Guidance for coding agents working in this repository.
 - `obj/`: object files
 
 ## Build and Run
-- Bootstrap local ncurses (no global install): `make deps`
 - Build app: `make`
 - Run app: `./bin/kenzitui`
 - Clean artifacts: `make clean`
@@ -50,7 +49,7 @@ Guidance for coding agents working in this repository.
 ## Behavior and Data Safety
 - Keep task persistence loader backward-compatible with old rows.
 - Current `tasks.dat` format is:
-  - `id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
+  - `id,name,description,project,path,context_path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
 - Preserve empty CSV fields while loading (`...,,...`) to avoid shifting `phase/points/tags/ticket`.
 - Keep board navigation behavior stable:
   - `h/l` move across phase columns.
@@ -63,6 +62,7 @@ Guidance for coding agents working in this repository.
   - update/add fetched Phabricator tasks
   - keep local non-Phabricator tasks untouched
   - never overwrite local `path` from fetch
+  - never overwrite local `context_path` from fetch
   - preserve local `is_done` and `priority` on existing tasks
 - Keep fetch preview behavior stable:
   - CLI supports `fetch --id <id> --preview` without writing files
@@ -72,11 +72,14 @@ Guidance for coding agents working in this repository.
   - expand `~` task path to `$HOME`
   - open nvim with task path as working directory
   - in tmux, reuse existing pane for same path instead of opening duplicate windows
+- Keep open-context behavior stable:
+  - key `O` opens `context_path`
+  - if `context_path` empty, show status message
 - Keep backup behavior intact: saving tasks should refresh `tasks.dat.bak`.
 - Keep restore command working (`restore --from <backup>` copies backup to `tasks.dat`).
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
-- Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.
+- Avoid breaking core actions: add/edit/delete/toggle/search/open path/open context/quit-save.
 
 ## Fetch Auth
 - Cookie source precedence:

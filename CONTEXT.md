@@ -11,6 +11,7 @@ Each task stores:
 - `description`
 - `project`
 - `path`
+- `context_path`
 - `is_done`
 - `priority`
 - `phase`
@@ -20,7 +21,7 @@ Each task stores:
 - `next_sprint_meeting`
 
 Persistence format (`tasks.dat`):
-`id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
+`id,name,description,project,path,context_path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
 
 Loader is backward-compatible with legacy 7-field rows.
 
@@ -30,7 +31,7 @@ Loader is backward-compatible with legacy 7-field rows.
 - `src/lib/task.c`: task CRUD + file load/save logic.
 - `src/lib/tuiaction.c`: dispatcher only (maps key -> action handler).
 - `src/lib/actions_nav.c`: board-aware movement (`h/j/k/l`).
-- `src/lib/actions_task.c`: task mutation actions (add/edit/delete/done/priority/move/open).
+- `src/lib/actions_task.c`: task mutation actions (add/edit/delete/done/priority/move/open project/open context).
 - `src/lib/actions_fetch.c`: fetch preview + async/cancel apply + reload.
 - `src/lib/input_ui.c`: shared prompt/status/input UI helpers.
 - `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`) with per-column point totals in header (`P:<sum>`).
@@ -60,10 +61,10 @@ Owner username source order (for fetch filtering / board label):
 - CSV loader preserves empty fields (`...,,...`) so column order remains stable.
 - `phase` and `points` are loaded correctly from `tasks.dat` even when `tags` or `next_sprint_meeting` are empty.
 - Fetch parser maps assigned tasks into the correct phase (including `Doing`) and fills `points` from workcard data.
-- Fetch merge behavior keeps user-local configuration fields on existing tasks (`path`, `is_done`, `priority`) and refreshes Phabricator fields (`name`, `description`, `project`, `phase`, `points`, `tags`, `ticket`, `next_sprint_meeting`).
+- Fetch merge behavior keeps user-local configuration fields on existing tasks (`path`, `context_path`, `is_done`, `priority`) and refreshes Phabricator fields (`name`, `description`, `project`, `phase`, `points`, `tags`, `ticket`, `next_sprint_meeting`).
+- For newly imported tasks, `context_path` auto-generates when `OBSIDIAN_PATH` is set.
 
 ## Development Commands
-- Bootstrap local ncurses (cross-platform friendly): `make deps`
 - Build: `make`
 - Run UI: `./bin/kenzitui`
 - Fetch sprint: `./bin/kenzitui fetch --id <sprint_id>`
@@ -72,7 +73,7 @@ Owner username source order (for fetch filtering / board label):
 
 Build portability:
 - Supported targets: Linux and macOS (Darwin).
-- `make deps` bootstraps a local ncurses copy so global package install is optional.
+- Build links against system ncurses (Linux/macOS).
 
 ## Current Interaction Model
 - `h/l`: move selection across phase columns.
@@ -82,6 +83,7 @@ Build portability:
 - `d`: delete requires confirmation (`y/N`).
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - `o`: expands `~` path to `$HOME` and opens Neovim at task path as working directory.
+- `O`: opens task `context_path` using same safe/tmux logic as `o`.
 - In tmux, `o` reuses an existing pane if the same path is already open; otherwise it creates a new tmux window.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.

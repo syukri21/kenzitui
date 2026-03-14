@@ -18,6 +18,7 @@
 #define MOVE_KEY 'm'
 #define MOVE_BACK_KEY 'M'
 #define OPEN_KEY 'o'
+#define OPEN_CONTEXT_KEY 'O'
 #define DONE_KEY ' '
 #define NAV_LEFT_KEY 'h'
 #define NAV_UP_KEY 'k'

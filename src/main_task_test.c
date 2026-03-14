@@ -1,6 +1,9 @@
+#define _GNU_SOURCE
+
 #include "kenzutls.h"
 #include "task.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -36,6 +39,8 @@ void test_task_logic() {
   Task *t3 =
       create_task(3, "Task, \"Quoted\"", "Desc, with \"quotes\"",
                   "Proj,3", "/tmp/a,b", LOW);
+  snprintf(t3->context_path, sizeof(t3->context_path),
+           "/tmp/ctx,\"quoted\",3.md");
   task_set_phab_fields(t3, "Need CR", 8, "tag-one|tag,with,comma",
                        "T\"3,EX", "2026-04-01");
   add_task(&head, t3);
@@ -74,6 +79,8 @@ void test_task_logic() {
          0);
   assert(strcmp(loaded_head->next->next->project, "Proj,3") == 0);
   assert(strcmp(loaded_head->next->next->path, "/tmp/a,b") == 0);
+  assert(strcmp(loaded_head->next->next->context_path, "/tmp/ctx,\"quoted\",3.md") ==
+         0);
   assert(strcmp(loaded_head->next->next->phase, "Need CR") == 0);
   assert(loaded_head->next->next->points == 8);
   assert(strcmp(loaded_head->next->next->tags, "tag-one|tag,with,comma") == 0);
@@ -94,8 +101,42 @@ void test_task_logic() {
   printf("All logic tests passed!\n");
 }
 
+void test_context_generation_and_compat() {
+  char out[MAX_PATH];
+  unsetenv("OBSIDIAN_PATH");
+  assert(task_build_context_path(out, sizeof(out), "T123",
+                                 "[Ledger Service] Create Credit API") == 0);
+
+  setenv("OBSIDIAN_PATH", "/vault", 1);
+  assert(task_build_context_path(out, sizeof(out), "T148272",
+                                 "[Ledger Service] Create Credit API") == 1);
+  assert(strcmp(out, "/vault/LedgerService/T148272_Create_Credit_API.md") == 0);
+
+  Task *t = create_task(10, "[Ledger Service] Create Credit API", "d", "p",
+                        "/tmp", MEDIUM);
+  snprintf(t->ticket, sizeof(t->ticket), "T148272");
+  task_auto_fill_context_path(t);
+  assert(strcmp(t->context_path,
+                "/vault/LedgerService/T148272_Create_Credit_API.md") == 0);
+  free_all_tasks(t);
+
+  FILE *f = fopen("/tmp/kenzitui_old_format.dat", "w");
+  assert(f != NULL);
+  fprintf(f, "77,Old,Desc,Proj,/tmp,0,1,Backlog,3,,T77,\n");
+  fclose(f);
+
+  int last_id = 0;
+  Task *loaded = load_tasks_from_file("/tmp/kenzitui_old_format.dat", &last_id);
+  assert(loaded != NULL);
+  assert(loaded->id == 77);
+  assert(strcmp(loaded->context_path, "") == 0);
+  free_all_tasks(loaded);
+  remove("/tmp/kenzitui_old_format.dat");
+}
+
 int main() {
   test_shell_quote();
   test_task_logic();
+  test_context_generation_and_compat();
   return 0;
 }

@@ -301,6 +301,10 @@ static int render_compact_card(const Task *task, int y, int x, int w,
   if (cfg->compact.show_path) {
     print_trim(y + 3, x + 1, w - 2, task->path[0] != '\0' ? task->path : "-",
                is_selected ? A_BOLD : A_DIM, 1);
+  } else if (cfg->compact.show_context) {
+    print_trim(y + 3, x + 1, w - 2,
+               task->context_path[0] != '\0' ? task->context_path : "-",
+               is_selected ? A_BOLD : A_DIM, 1);
   } else {
     print_trim(y + 3, x + 1, w - 2, "", 0, 5);
   }
@@ -455,7 +459,17 @@ static void render_details(Task *selected, int top, int h) {
   snprintf(line3, sizeof(line3), "Tags:%s", selected->tags[0] != '\0' ? selected->tags : "-");
   print_trim(top + 3, 3, COLS - 6, line3, 0, 5);
 
-  print_trim(top + 4, 3, COLS - 6, selected->description, 0, 5);
+  char line4[512];
+  snprintf(line4, sizeof(line4), "Path:%s",
+           selected->path[0] != '\0' ? selected->path : "-");
+  print_trim(top + 4, 3, COLS - 6, line4, 0, 5);
+
+  char line5[512];
+  snprintf(line5, sizeof(line5), "Context:%s",
+           selected->context_path[0] != '\0' ? selected->context_path : "-");
+  print_trim(top + 5, 3, COLS - 6, line5, 0, 5);
+
+  print_trim(top + 6, 3, COLS - 6, selected->description, 0, 5);
 }
 
 void init_tui_colors(void) {
@@ -510,7 +524,7 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
            percent_of(summary.others, summary.total), summary.total);
   print_trim(1, 2, COLS - 4, stat_line, A_DIM, 10);
 
-  int detail_h = 7;
+  int detail_h = 9;
   int detail_top = LINES - detail_h - 1;
   render_board(head, selected_id, search_query, 2, detail_top - 1);
 
@@ -519,11 +533,11 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
 
   char footer[256];
   snprintf(footer, sizeof(footer),
-           "%c/%c phase  %c/%c up-down  SPACE done  %c fetch  %c add  %c edit  %c delete  %c priority  %c next-phase  %c prev-phase  %c search  %c clear  %c open  q quit",
+           "%c/%c phase  %c/%c up-down  SPACE done  %c fetch  %c add  %c edit  %c delete  %c priority  %c next-phase  %c prev-phase  %c search  %c clear  %c open  %c open-context  q quit",
            cfg->keys.nav_left, cfg->keys.nav_right, cfg->keys.nav_down,
            cfg->keys.nav_up, cfg->keys.fetch, cfg->keys.add, cfg->keys.edit,
            cfg->keys.del, cfg->keys.priority, cfg->keys.move_next_phase,
            cfg->keys.move_prev_phase, cfg->keys.search,
-           cfg->keys.clear_search, cfg->keys.open);
+           cfg->keys.clear_search, cfg->keys.open, cfg->keys.open_context);
   print_trim(LINES - 1, 2, COLS - 4, footer, A_DIM, 5);
 }

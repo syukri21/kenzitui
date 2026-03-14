@@ -12,6 +12,7 @@ typedef struct AppKeyConfig {
   int move_next_phase;
   int move_prev_phase;
   int open;
+  int open_context;
   int done;
   int nav_left;
   int nav_up;
@@ -34,6 +35,7 @@ typedef struct AppColorConfig {
 typedef struct AppCompactConfig {
   int show_tags;
   int show_path;
+  int show_context;
 } AppCompactConfig;
 
 typedef struct AppConfig {

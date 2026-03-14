@@ -13,8 +13,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Bootstrap local ncurses
-        run: make deps
       - name: Build
         run: make
       - name: Test

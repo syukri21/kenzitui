@@ -117,6 +117,78 @@ static int find_tmux_target_for_path(const char *path, char *out_window,
   return 0;
 }
 
+static void open_target_path(const Task *current, const char *raw_path,
+                             const char *empty_message,
+                             const char *failed_message) {
+  if (current == NULL || raw_path == NULL || raw_path[0] == '\0') {
+    tui_show_status_message(
+        empty_message != NULL ? empty_message : "Path is empty.");
+    return;
+  }
+
+  char command[4096];
+  char resolved_path[MAX_PATH];
+  if (!resolve_open_path(raw_path, resolved_path, sizeof(resolved_path))) {
+    tui_show_status_message("Path too long.");
+    return;
+  }
+  char q_path[(MAX_PATH * 5) + 8];
+  if (!shell_quote_single(resolved_path, q_path, sizeof(q_path))) {
+    tui_show_status_message("Path too long for shell escaping.");
+    return;
+  }
+
+  if (getenv("TMUX")) {
+    char window_name[64];
+    char target_window[128];
+    char target_pane[64];
+    char q_target_window[(128 * 5) + 8];
+    char q_target_pane[(64 * 5) + 8];
+    char q_window_name[(64 * 5) + 8];
+    if (find_tmux_target_for_path(resolved_path, target_window,
+                                  sizeof(target_window), target_pane,
+                                  sizeof(target_pane))) {
+      if (!shell_quote_single(target_window, q_target_window,
+                              sizeof(q_target_window)) ||
+          !shell_quote_single(target_pane, q_target_pane,
+                              sizeof(q_target_pane))) {
+        tui_show_status_message("tmux target too long for shell escaping.");
+        return;
+      }
+
+      snprintf(command, sizeof(command),
+               "tmux select-window -t %s && tmux select-pane -t %s",
+               q_target_window, q_target_pane);
+    } else {
+      build_tmux_window_name(current, window_name, sizeof(window_name));
+      if (!shell_quote_single(window_name, q_window_name,
+                              sizeof(q_window_name))) {
+        tui_show_status_message("Window name too long for shell escaping.");
+        return;
+      }
+
+      snprintf(command, sizeof(command), "tmux new-window -c %s -n %s 'nvim .'",
+               q_path, q_window_name);
+    }
+    if (system(command) != 0) {
+      tui_show_status_message(
+          failed_message != NULL ? failed_message
+                                 : "Failed to open tmux window for path.");
+    }
+  } else {
+    def_prog_mode();
+    endwin();
+    snprintf(command, sizeof(command), "cd -- %s && nvim .", q_path);
+    if (system(command) != 0) {
+      tui_show_status_message(failed_message != NULL
+                                  ? failed_message
+                                  : "Failed to open nvim for selected path.");
+    }
+    reset_prog_mode();
+    refresh();
+  }
+}
+
 static void cycle_task_phase(Task *task) {
   if (task == NULL) {
     return;
@@ -219,6 +291,7 @@ void tui_action_add(TuiAction *action) {
   char desc[MAX_DESC] = "";
   char project[MAX_PROJECT] = "";
   char path[MAX_PATH] = "";
+  char context_path[MAX_PATH] = "";
   char phase[MAX_PHASE] = "Backlog";
   char tags[MAX_TAGS] = "";
   char ticket[MAX_TICKET] = "";
@@ -229,6 +302,7 @@ void tui_action_add(TuiAction *action) {
   tui_input("Task Description: ", desc, MAX_DESC);
   tui_input("Project Name: ", project, MAX_PROJECT);
   tui_get_path_input("Project Path: ", path, MAX_PATH);
+  tui_get_path_input("Context File Path: ", context_path, MAX_PATH);
   tui_input("Phase: ", phase, MAX_PHASE);
   tui_input("Points: ", points_buf, (int)sizeof(points_buf));
   tui_input("Tags (| separated): ", tags, MAX_TAGS);
@@ -239,8 +313,10 @@ void tui_action_add(TuiAction *action) {
   Task *task = create_task(action->state->next_id++, name, desc, project, path,
                            priority);
   if (task != NULL) {
+    snprintf(task->context_path, sizeof(task->context_path), "%s", context_path);
     task_set_phab_fields(task, phase, atoi(points_buf), tags, ticket,
                          next_meeting);
+    task_auto_fill_context_path(task);
     add_task(&action->state->head, task);
   }
   if (action->state->selected_id == 0 && action->state->head != NULL) {
@@ -264,6 +340,7 @@ void tui_action_edit(TuiAction *action) {
   tui_input("New Description: ", current->description, MAX_DESC);
   tui_input("New Project Name: ", current->project, MAX_PROJECT);
   tui_get_path_input("New Project Path: ", current->path, MAX_PATH);
+  tui_get_path_input("New Context File Path: ", current->context_path, MAX_PATH);
   tui_input("New Phase: ", current->phase, MAX_PHASE);
   tui_input("New Points: ", points_buf, (int)sizeof(points_buf));
   current->points = atoi(points_buf);
@@ -272,6 +349,7 @@ void tui_action_edit(TuiAction *action) {
   tui_input("New Next Sprint Meeting: ", current->next_sprint_meeting,
             MAX_NEXT_MEETING);
   current->priority = tui_get_priority_input();
+  task_auto_fill_context_path(current);
   persist(action->state);
 }
 
@@ -316,66 +394,21 @@ void tui_action_open_path(TuiAction *action) {
     return;
   }
   Task *current = find_selected(action->state);
-  if (current == NULL || current->path[0] == '\0') {
+  if (current == NULL) {
     return;
   }
+  open_target_path(current, current->path, "Project path is empty.",
+                   "Failed to open project path.");
+}
 
-  char command[4096];
-  char resolved_path[MAX_PATH];
-  if (!resolve_open_path(current->path, resolved_path, sizeof(resolved_path))) {
-    tui_show_status_message("Path too long.");
+void tui_action_open_context_path(TuiAction *action) {
+  if (action == NULL || action->state == NULL) {
     return;
   }
-  char q_path[(MAX_PATH * 5) + 8];
-  if (!shell_quote_single(resolved_path, q_path, sizeof(q_path))) {
-    tui_show_status_message("Path too long for shell escaping.");
+  Task *current = find_selected(action->state);
+  if (current == NULL) {
     return;
   }
-
-  if (getenv("TMUX")) {
-    char window_name[64];
-    char target_window[128];
-    char target_pane[64];
-    char q_target_window[(128 * 5) + 8];
-    char q_target_pane[(64 * 5) + 8];
-    char q_window_name[(64 * 5) + 8];
-    if (find_tmux_target_for_path(resolved_path, target_window,
-                                  sizeof(target_window), target_pane,
-                                  sizeof(target_pane))) {
-      if (!shell_quote_single(target_window, q_target_window,
-                              sizeof(q_target_window)) ||
-          !shell_quote_single(target_pane, q_target_pane,
-                              sizeof(q_target_pane))) {
-        tui_show_status_message("tmux target too long for shell escaping.");
-        return;
-      }
-
-      snprintf(command, sizeof(command),
-               "tmux select-window -t %s && tmux select-pane -t %s", q_target_window,
-               q_target_pane);
-    } else {
-      build_tmux_window_name(current, window_name, sizeof(window_name));
-      if (!shell_quote_single(window_name, q_window_name,
-                              sizeof(q_window_name))) {
-        tui_show_status_message("Window name too long for shell escaping.");
-        return;
-      }
-
-      snprintf(command, sizeof(command), "tmux new-window -c %s -n %s 'nvim .'",
-               q_path, q_window_name);
-    }
-    if (system(command) != 0) {
-      tui_show_status_message("Failed to open tmux window for task path.");
-    }
-  } else {
-    def_prog_mode();
-    endwin();
-    printf("Not in tmux session. Opening nvim normally...\n");
-    snprintf(command, sizeof(command), "cd -- %s && nvim .", q_path);
-    if (system(command) != 0) {
-      tui_show_status_message("Failed to open nvim for task path.");
-    }
-    reset_prog_mode();
-    refresh();
-  }
+  open_target_path(current, current->context_path, "Context path is empty.",
+                   "Failed to open context path.");
 }

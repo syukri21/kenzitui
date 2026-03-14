@@ -2,12 +2,6 @@ CC ?= cc
 BASE_CFLAGS = -Wall -Wextra -Werror -Iinclude -std=c11
 UNAME_S := $(shell uname -s)
 
-NCURSES_LOCAL_PREFIX = third_party/ncurses/local
-NCURSES_LOCAL_LIBS = \
-	$(wildcard $(NCURSES_LOCAL_PREFIX)/lib/libncursesw.a) \
-	$(wildcard $(NCURSES_LOCAL_PREFIX)/lib/libtinfow.a) \
-	$(wildcard $(NCURSES_LOCAL_PREFIX)/lib/libtinfo.a)
-
 PKG_NCURSES_CFLAGS = $(shell pkg-config --cflags ncursesw 2>/dev/null || pkg-config --cflags ncurses 2>/dev/null)
 PKG_NCURSES_LIBS = $(shell pkg-config --libs ncursesw 2>/dev/null || pkg-config --libs ncurses 2>/dev/null)
 
@@ -23,13 +17,8 @@ else
   SYS_NCURSES_LIBS = $(if $(strip $(PKG_NCURSES_LIBS)),$(PKG_NCURSES_LIBS),-lncurses)
 endif
 
-ifeq ($(strip $(NCURSES_LOCAL_LIBS)),)
-	CFLAGS = $(BASE_CFLAGS) $(SYS_NCURSES_CFLAGS)
-	LDFLAGS = $(SYS_NCURSES_LIBS)
-else
-	CFLAGS = $(BASE_CFLAGS) -I$(NCURSES_LOCAL_PREFIX)/include -I$(NCURSES_LOCAL_PREFIX)/include/ncursesw
-	LDFLAGS = $(NCURSES_LOCAL_LIBS)
-endif
+CFLAGS = $(BASE_CFLAGS) $(SYS_NCURSES_CFLAGS)
+LDFLAGS = $(SYS_NCURSES_LIBS)
 
 SRC_DIR = src
 INC_DIR = include
@@ -75,10 +64,7 @@ $(TEST_TARGET): $(TEST_SRC) $(LIB) | $(BIN_DIR)
 $(FETCH_TEST_TARGET): $(FETCH_TEST_SRC) $(LIB) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $(FETCH_TEST_SRC) $(LIB) -o $(FETCH_TEST_TARGET) $(LDFLAGS)
 
-deps:
-	./scripts/bootstrap_ncurses.sh
-
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) compile_commands.json
 
-.PHONY: all clean test deps
+.PHONY: all clean test

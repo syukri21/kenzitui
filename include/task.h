@@ -2,6 +2,7 @@
 #define TASK_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #define MAX_NAME 100
 #define MAX_TITLE MAX_NAME
@@ -21,6 +22,7 @@ typedef struct Task {
   char description[MAX_DESC];
   char project[MAX_PROJECT];
   char path[MAX_PATH];
+  char context_path[MAX_PATH];
 
   // Phabricator-oriented fields
   char phase[MAX_PHASE];
@@ -36,6 +38,9 @@ typedef struct Task {
 
 Task *create_task(int id, const char *name, const char *desc,
                   const char *project, const char *path, Priority priority);
+void task_auto_fill_context_path(Task *task);
+int task_build_context_path(char *out, size_t out_size, const char *ticket,
+                            const char *task_name);
 void task_set_phab_fields(Task *task, const char *phase, int points,
                           const char *tags, const char *ticket,
                           const char *next_sprint_meeting);

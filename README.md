@@ -28,6 +28,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Search**: Real-time filtering of tasks by title or project.
 - **Persistence**: Automatic saving/loading to `tasks.dat` with immediate autosave on mutating actions.
 - **Integrated Editor**: Open task project paths directly in Neovim (with Tmux support).
+- **Task Context Link**: Each task has `context_path` (Obsidian note path) with optional auto-generation from `OBSIDIAN_PATH`.
 - **Smart Open Reuse**: `o` reuses existing tmux pane when same project path is already open; otherwise opens a new tmux window at that path.
 - **Path Completion**: Tab-completion for file paths when adding/editing tasks.
 
@@ -50,6 +51,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 | `/`       | Search Tasks         |
 | `c`       | Clear Search         |
 | `o`       | Open Path in Neovim  |
+| `O`       | Open Context File    |
 | `q`       | Quit and Save        |
 
 Delete behavior:
@@ -60,21 +62,20 @@ Open behavior (`o`):
 - Opens Neovim with the task path as working directory.
 - In tmux, switches to an existing pane if that same path is already open; otherwise creates a new window.
 
+Open context behavior (`O`):
+- Opens `context_path` with the same safe/tmux logic as `o`.
+- Shows status message if `context_path` is empty.
+
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites
-No global ncurses install is required if you use local bootstrap:
-```bash
-make deps
-```
-This builds ncurses into `third_party/ncurses/local` and `make` links against it.
-
-If your system already provides ncurses headers/libs, `make` can use system ncurses directly.
-On macOS, Makefile also detects Homebrew ncurses automatically (`brew install ncurses`).
+Install ncurses development libraries on your system.
+Examples:
+- Ubuntu/Debian: `sudo apt install libncurses-dev`
+- macOS (Homebrew): `brew install ncurses`
 
 ### 🛠 Installation
-1.  **(Optional) Bootstrap local ncurses**: `make deps`
-2.  **Build**: Run `make` to compile.
+1.  **Build**: Run `make` to compile.
 2.  **Run**: Execute `./bin/kenzitui`.
 3.  **Clean**: Run `make clean` to remove build artifacts.
 
@@ -117,6 +118,7 @@ Quick setup:
 ```bash
 cp env.example .env
 # then fill PHAB_COOKIE in .env
+# optional: set OBSIDIAN_PATH for context note auto-generation
 ```
 
 Security notes for `.env`:
@@ -145,16 +147,22 @@ cp kenzitui.conf.example .kenzitui.conf
 
 ## 💾 Task Data Format
 `tasks.dat` rows use:
-`id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
+`id,name,description,project,path,context_path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`
 
 The loader remains backward-compatible with older 7-field task rows.
 It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, and `ticket` stay mapped correctly.
+
+Context auto-generation:
+- If task `context_path` is empty and `OBSIDIAN_PATH` is set, Kenzitui generates:
+  - `<OBSIDIAN_PATH>/<Subfolder>/<ticket>_<task_name_slug>.md`
+- Bracket prefix folder example:
+  - `[Ledger Service] Create Credit API` -> `LedgerService/T148272_Create_Credit_API.md`
 
 ## 📌 Fetch Notes
 - Sprint fetch maps tasks by assigned owner and preserves phase placement (e.g. `Doing` vs `Backlog`).
 - Points are read from the Phabricator workcard points tag and persisted into `tasks.dat`.
 - Fetch uses merge mode: it updates/adds fetched Phabricator tasks, while keeping non-Phabricator local tasks untouched.
-- Local task path is never overwritten by fetch (CLI or TUI); `path` remains local configuration.
+- Local task path/context are never overwritten by fetch (CLI or TUI); `path` and `context_path` remain local configuration.
 
 ## 📂 Project Structure
 
@@ -162,7 +170,7 @@ It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, an
 - `src/lib/`: Implementation of tasks, TUI actions, and utilities.
   - `tuiaction.c`: action dispatcher only
   - `actions_nav.c`: board navigation actions
-  - `actions_task.c`: add/edit/delete/done/priority/move/open actions
+  - `actions_task.c`: add/edit/delete/done/priority/move/open actions (`o` project path, `O` context path)
   - `actions_fetch.c`: preview + async/cancel fetch action
   - `input_ui.c`: prompt/status/input helpers
 - `include/`: Header files defining the data models and action systems.

@@ -26,6 +26,8 @@ static int canonical_key(int ch) {
     return MOVE_BACK_KEY;
   if (ch == cfg->keys.open)
     return OPEN_KEY;
+  if (ch == cfg->keys.open_context)
+    return OPEN_CONTEXT_KEY;
   if (ch == cfg->keys.done)
     return DONE_KEY;
   if (ch == cfg->keys.nav_left)
@@ -93,6 +95,9 @@ void execute(TuiAction *action) {
     break;
   case OPEN_KEY:
     tui_action_open_path(action);
+    break;
+  case OPEN_CONTEXT_KEY:
+    tui_action_open_context_path(action);
     break;
   default:
     break;

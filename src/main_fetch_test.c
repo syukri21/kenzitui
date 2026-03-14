@@ -1,7 +1,10 @@
+#define _GNU_SOURCE
+
 #include "phab_fetch.h"
 #include "task.h"
 
 #include <assert.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -85,9 +88,12 @@ static void test_merge_keeps_local_tasks_and_path() {
       "PHID-TASK-aa2&quot;:{&quot;owner&quot;:[1,&quot;syukri.khairi&quot;]}";
 
   const char *path = "/tmp/kenzitui_merge_test.dat";
+  setenv("OBSIDIAN_PATH", "/vault", 1);
   Task *seed = NULL;
   Task *t100 = create_task(100, "Old Task 100", "old", "Local", "/keep/local",
                            HIGH);
+  snprintf(t100->context_path, sizeof(t100->context_path),
+           "/keep/context/T100_local.md");
   t100->is_done = true;
   add_task(&seed, t100);
   Task *t999 = create_task(999, "Local Only", "keep", "Local", "/local/only",
@@ -109,6 +115,7 @@ static void test_merge_keeps_local_tasks_and_path() {
   assert(strcmp(m100->phase, "Doing") == 0);
   assert(m100->points == 8);
   assert(strcmp(m100->path, "/keep/local") == 0);
+  assert(strcmp(m100->context_path, "/keep/context/T100_local.md") == 0);
   assert(m100->is_done == true);
   assert(m100->priority == HIGH);
 
@@ -116,14 +123,17 @@ static void test_merge_keeps_local_tasks_and_path() {
   assert(m999 != NULL);
   assert(strcmp(m999->name, "Local Only") == 0);
   assert(strcmp(m999->path, "/local/only") == 0);
+  assert(strcmp(m999->context_path, "") == 0);
 
   Task *m101 = find_by_id(loaded, 101);
   assert(m101 != NULL);
   assert(strcmp(m101->phase, "Doing") == 0);
   assert(m101->points == 3);
+  assert(strcmp(m101->context_path, "/vault/General/T101_New_Task_101.md") == 0);
 
   free_all_tasks(loaded);
   remove(path);
+  unsetenv("OBSIDIAN_PATH");
 }
 
 int main() {

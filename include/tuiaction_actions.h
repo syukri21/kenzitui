@@ -17,5 +17,6 @@ void tui_action_cycle_priority(TuiAction *action);
 void tui_action_move_phase_next(TuiAction *action);
 void tui_action_move_phase_prev(TuiAction *action);
 void tui_action_open_path(TuiAction *action);
+void tui_action_open_context_path(TuiAction *action);
 
 #endif

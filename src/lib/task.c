@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,136 @@ static void copy_str(char *dst, size_t dst_size, const char *src) {
   dst[dst_size - 1] = '\0';
 }
 
+static int append_char(char *out, size_t out_size, size_t *w, char ch) {
+  if (out == NULL || w == NULL || *w + 1 >= out_size) {
+    return 0;
+  }
+  out[(*w)++] = ch;
+  out[*w] = '\0';
+  return 1;
+}
+
+static void normalize_bracket_prefix_folder(const char *name, char *out,
+                                            size_t out_size) {
+  if (out == NULL || out_size == 0) {
+    return;
+  }
+  out[0] = '\0';
+  if (name == NULL || name[0] != '[') {
+    snprintf(out, out_size, "General");
+    return;
+  }
+
+  const char *end = strchr(name, ']');
+  if (end == NULL || end <= name + 1) {
+    snprintf(out, out_size, "General");
+    return;
+  }
+
+  size_t w = 0;
+  for (const char *p = name + 1; p < end; p++) {
+    unsigned char ch = (unsigned char)*p;
+    if (isalnum(ch)) {
+      if (!append_char(out, out_size, &w, (char)ch)) {
+        break;
+      }
+    }
+  }
+
+  if (w == 0) {
+    snprintf(out, out_size, "General");
+  }
+}
+
+static void build_task_name_slug(const char *name, char *out, size_t out_size) {
+  if (out == NULL || out_size == 0) {
+    return;
+  }
+  out[0] = '\0';
+  if (name == NULL || name[0] == '\0') {
+    snprintf(out, out_size, "Task");
+    return;
+  }
+
+  const char *text = name;
+  if (name[0] == '[') {
+    const char *end = strchr(name, ']');
+    if (end != NULL) {
+      text = end + 1;
+    }
+  }
+  while (*text != '\0' && isspace((unsigned char)*text)) {
+    text++;
+  }
+
+  size_t w = 0;
+  int prev_underscore = 0;
+  for (const char *p = text; *p != '\0'; p++) {
+    unsigned char ch = (unsigned char)*p;
+    int is_invalid =
+        (ch == '/' || ch == '\\' || ch == ':' || ch == '*' || ch == '?' ||
+         ch == '"' || ch == '<' || ch == '>' || ch == '|');
+
+    if (isalnum(ch)) {
+      if (!append_char(out, out_size, &w, (char)ch)) {
+        break;
+      }
+      prev_underscore = 0;
+      continue;
+    }
+
+    if (isspace(ch) || ch == '-' || ch == '_' || is_invalid) {
+      if (!prev_underscore && w > 0) {
+        if (!append_char(out, out_size, &w, '_')) {
+          break;
+        }
+        prev_underscore = 1;
+      }
+    }
+  }
+
+  while (w > 0 && out[w - 1] == '_') {
+    out[--w] = '\0';
+  }
+
+  if (w == 0) {
+    snprintf(out, out_size, "Task");
+  }
+}
+
+int task_build_context_path(char *out, size_t out_size, const char *ticket,
+                            const char *task_name) {
+  if (out == NULL || out_size == 0) {
+    return 0;
+  }
+  out[0] = '\0';
+
+  const char *root = getenv("OBSIDIAN_PATH");
+  if (root == NULL || root[0] == '\0') {
+    return 0;
+  }
+
+  char folder[64];
+  char slug[128];
+  const char *tid = (ticket != NULL && ticket[0] != '\0') ? ticket : "T0";
+  normalize_bracket_prefix_folder(task_name, folder, sizeof(folder));
+  build_task_name_slug(task_name, slug, sizeof(slug));
+
+  return snprintf(out, out_size, "%s/%s/%s_%s.md", root, folder, tid, slug) <
+         (int)out_size;
+}
+
+void task_auto_fill_context_path(Task *task) {
+  if (task == NULL || task->context_path[0] != '\0') {
+    return;
+  }
+  char generated[MAX_PATH];
+  if (task_build_context_path(generated, sizeof(generated), task->ticket,
+                              task->name)) {
+    copy_str(task->context_path, sizeof(task->context_path), generated);
+  }
+}
+
 Task *create_task(int id, const char *name, const char *desc,
                   const char *project, const char *path, Priority priority) {
   Task *new_task = (Task *)malloc(sizeof(Task));
@@ -32,6 +163,7 @@ Task *create_task(int id, const char *name, const char *desc,
   copy_str(new_task->description, sizeof(new_task->description), desc);
   copy_str(new_task->project, sizeof(new_task->project), project);
   copy_str(new_task->path, sizeof(new_task->path), path);
+  new_task->context_path[0] = '\0';
 
   copy_str(new_task->phase, sizeof(new_task->phase), "Backlog");
   new_task->points = 0;
@@ -132,7 +264,9 @@ void print_all_tasks(Task *head) {
            current->is_done ? "x" : " ", current->ticket, current->name,
            current->phase, current->points,
            current->tags[0] != '\0' ? current->tags : "-");
-    printf("Project: %s | Path: %s\n", current->project, current->path);
+    printf("Project: %s | Path: %s | Context: %s\n", current->project,
+           current->path,
+           current->context_path[0] != '\0' ? current->context_path : "-");
     printf("Next Sprint Meeting: %s\n",
            current->next_sprint_meeting[0] != '\0' ? current->next_sprint_meeting
                                                     : "-");
@@ -166,11 +300,10 @@ void save_tasks_to_file(Task *head, const char *filename) {
   while (current != NULL) {
     fprintf(file, "%d,", current->id);
 
-    const char *string_fields[] = {current->name,
-                                   current->description,
-                                   current->project,
-                                   current->path};
-    for (size_t i = 0; i < 4; i++) {
+    const char *string_fields[] = {current->name,         current->description,
+                                   current->project,      current->path,
+                                   current->context_path};
+    for (size_t i = 0; i < 5; i++) {
       const char *value = string_fields[i] != NULL ? string_fields[i] : "";
       int needs_quotes = 0;
       for (const char *p = value; *p != '\0'; p++) {
@@ -342,8 +475,30 @@ Task *load_tasks_from_file(const char *filename, int *last_id) {
     }
 
     int id = atoi(fields[0]);
-    int is_done = atoi(fields[5]);
-    int priority = atoi(fields[6]);
+    int is_done_idx = 5;
+    int priority_idx = 6;
+    int phase_idx = 7;
+    int points_idx = 8;
+    int tags_idx = 9;
+    int ticket_idx = 10;
+    int next_idx = 11;
+    int context_idx = -1;
+
+    // New format:
+    // id,name,description,project,path,context_path,is_done,priority,phase,points,tags,ticket,next
+    if (field_count >= 13) {
+      context_idx = 5;
+      is_done_idx = 6;
+      priority_idx = 7;
+      phase_idx = 8;
+      points_idx = 9;
+      tags_idx = 10;
+      ticket_idx = 11;
+      next_idx = 12;
+    }
+
+    int is_done = atoi(fields[is_done_idx]);
+    int priority = atoi(fields[priority_idx]);
 
     Task *new_task = create_task(id, fields[1], fields[2], fields[3], fields[4],
                                  (Priority)priority);
@@ -351,13 +506,18 @@ Task *load_tasks_from_file(const char *filename, int *last_id) {
       continue;
     }
 
+    if (context_idx >= 0 && fields[context_idx] != NULL) {
+      copy_str(new_task->context_path, sizeof(new_task->context_path),
+               fields[context_idx]);
+    }
+
     new_task->is_done = (bool)is_done;
 
-    // Backward compatible: old format has 7 fields, new has 12.
+    // Backward compatible: old format has 7 fields, then 12, now 13.
     if (field_count >= 12) {
-      int points = atoi(fields[8]);
-      task_set_phab_fields(new_task, fields[7], points, fields[9], fields[10],
-                           fields[11]);
+      int points = atoi(fields[points_idx]);
+      task_set_phab_fields(new_task, fields[phase_idx], points, fields[tags_idx],
+                           fields[ticket_idx], fields[next_idx]);
     }
 
     add_task(&head, new_task);

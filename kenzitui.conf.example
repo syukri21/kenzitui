@@ -12,6 +12,7 @@ key.priority=p
 key.move_next_phase=m
 key.move_prev_phase=M
 key.open=o
+key.open_context=O
 key.done=space
 key.nav_left=h
 key.nav_up=k
@@ -32,3 +33,4 @@ color.path=cyan
 # Compact card fields
 compact.show_tags=1
 compact.show_path=1
+compact.show_context=0

@@ -1021,6 +1021,7 @@ static int merge_imported_tasks_into_existing(ImportedTask *items, size_t count,
     }
     task_set_phab_fields(task, items[i].phase, items[i].points, items[i].tags,
                          items[i].ticket, items[i].next_sprint_meeting);
+    task_auto_fill_context_path(task);
     add_task(head, task);
     (*added)++;
   }
