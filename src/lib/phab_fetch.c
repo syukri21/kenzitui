@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 typedef struct ImportedTask {
   int tid;
@@ -25,6 +26,23 @@ typedef struct AssignedPHID {
 
 static int find_template_entry(const char *html, const char *phid,
                                const char **out_start, const char **out_end);
+
+static char g_phab_fetch_last_error[256] = "";
+
+static void phab_set_error(const char *fmt, ...) {
+  if (fmt == NULL) {
+    g_phab_fetch_last_error[0] = '\0';
+    return;
+  }
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(g_phab_fetch_last_error, sizeof(g_phab_fetch_last_error), fmt, ap);
+  va_end(ap);
+}
+
+const char *phab_fetch_last_error(void) {
+  return g_phab_fetch_last_error;
+}
 
 static int is_shell_safe(const char *value) {
   return value != NULL && strchr(value, '\'') == NULL;
@@ -145,7 +163,8 @@ static char *extract_owner_from_file(const char *path) {
     }
 
     if (strncmp(line, "KENZITUI_PHAB_USER=", 19) != 0 &&
-        strncmp(line, "PHAB_USER=", 10) != 0) {
+        strncmp(line, "PHAB_USER=", 10) != 0 &&
+        strncmp(line, "USER=", 5) != 0) {
       continue;
     }
 
@@ -286,6 +305,7 @@ static char *load_owner_username(const char *cookie_source_path) {
 
 static char *fetch_dashboard_html(int sprint_id, const char *cookie) {
   if (!is_shell_safe(cookie)) {
+    phab_set_error("Cookie contains unsupported single quote character.");
     return NULL;
   }
 
@@ -297,6 +317,7 @@ static char *fetch_dashboard_html(int sprint_id, const char *cookie) {
 
   FILE *pipe = popen(command, "r");
   if (pipe == NULL) {
+    phab_set_error("Failed to start curl process.");
     return NULL;
   }
 
@@ -304,6 +325,7 @@ static char *fetch_dashboard_html(int sprint_id, const char *cookie) {
   int rc = pclose(pipe);
   if (rc != 0) {
     free(html);
+    phab_set_error("curl failed for sprint %d.", sprint_id);
     return NULL;
   }
 
@@ -1008,12 +1030,15 @@ static int merge_imported_tasks_into_existing(ImportedTask *items, size_t count,
 
 int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
                                const char *cookie_source_path) {
+  phab_set_error(NULL);
   if (sprint_id <= 0 || output_path == NULL || cookie_source_path == NULL) {
+    phab_set_error("Invalid fetch arguments.");
     return -1;
   }
 
   char *cookie = load_cookie(cookie_source_path);
   if (cookie == NULL) {
+    phab_set_error("Cookie missing. Set KENZITUI_PHAB_COOKIE/PHAB_COOKIE in env or .env.");
     fprintf(stderr,
             "Failed to load Phabricator cookie. Set KENZITUI_PHAB_COOKIE / PHAB_COOKIE or define it in .env.\n");
     return -1;
@@ -1022,6 +1047,9 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
   char *html = fetch_dashboard_html(sprint_id, cookie);
   free(cookie);
   if (html == NULL) {
+    if (g_phab_fetch_last_error[0] == '\0') {
+      phab_set_error("Failed to fetch dashboard HTML for sprint %d.", sprint_id);
+    }
     fprintf(stderr, "Failed to fetch dashboard HTML for sprint %d.\n", sprint_id);
     return -1;
   }
@@ -1032,6 +1060,7 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
   if (!parse_tasks_from_html(html, owner_username, &items, &count)) {
     free(html);
     free(owner_username);
+    phab_set_error("Failed to parse dashboard HTML.");
     fprintf(stderr, "Failed to parse tasks from dashboard HTML.\n");
     return -1;
   }
@@ -1040,6 +1069,7 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
 
   if (count == 0) {
     free(items);
+    phab_set_error("No tasks found for owner in sprint %d.", sprint_id);
     fprintf(stderr, "No tasks found for sprint %d.\n", sprint_id);
     return -1;
   }
@@ -1053,6 +1083,7 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
                                           &added)) {
     free(items);
     free_all_tasks(head);
+    phab_set_error("Failed to merge imported tasks.");
     fprintf(stderr, "Failed to merge imported task list.\n");
     return -1;
   }
@@ -1070,9 +1101,11 @@ int preview_fetch_sprint_tasks(int sprint_id, const char *output_path,
                                const char *cookie_source_path,
                                size_t *out_fetched, size_t *out_updated,
                                size_t *out_added, size_t *out_kept) {
+  phab_set_error(NULL);
   if (sprint_id <= 0 || output_path == NULL || cookie_source_path == NULL ||
       out_fetched == NULL || out_updated == NULL || out_added == NULL ||
       out_kept == NULL) {
+    phab_set_error("Invalid preview arguments.");
     return -1;
   }
 
@@ -1083,22 +1116,39 @@ int preview_fetch_sprint_tasks(int sprint_id, const char *output_path,
 
   char *cookie = load_cookie(cookie_source_path);
   if (cookie == NULL) {
+    phab_set_error("Cookie missing. Set KENZITUI_PHAB_COOKIE/PHAB_COOKIE in env or .env.");
     return -1;
   }
 
   char *html = fetch_dashboard_html(sprint_id, cookie);
   free(cookie);
   if (html == NULL) {
+    if (g_phab_fetch_last_error[0] == '\0') {
+      phab_set_error("Failed to fetch dashboard HTML for sprint %d.", sprint_id);
+    }
     return -1;
   }
 
   ImportedTask *items = NULL;
   size_t count = 0;
   char *owner_username = load_owner_username(cookie_source_path);
+  char owner_for_error[128] = "";
+  if (owner_username != NULL) {
+    snprintf(owner_for_error, sizeof(owner_for_error), "%s", owner_username);
+  } else {
+    snprintf(owner_for_error, sizeof(owner_for_error), "<empty>");
+  }
   int ok = parse_tasks_from_html(html, owner_username, &items, &count);
   free(owner_username);
   free(html);
-  if (!ok || count == 0) {
+  if (!ok) {
+    phab_set_error("Failed to parse dashboard HTML.");
+    free(items);
+    return -1;
+  }
+  if (count == 0) {
+    phab_set_error("No tasks found for owner '%s' in sprint %d.",
+                   owner_for_error, sprint_id);
     free(items);
     return -1;
   }

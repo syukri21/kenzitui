@@ -6,8 +6,8 @@
 #define MAX_NAV_TASKS 512
 
 typedef struct NavColumns {
-  Task *items[3][MAX_NAV_TASKS];
-  int counts[3];
+  Task *items[4][MAX_NAV_TASKS];
+  int counts[4];
 } NavColumns;
 
 static int nav_phase_to_column(const char *phase) {
@@ -19,6 +19,9 @@ static int nav_phase_to_column(const char *phase) {
   }
   if (strcasestr(phase, "need") != NULL && strcasestr(phase, "cr") != NULL) {
     return 2;
+  }
+  if (strcasestr(phase, "done") != NULL) {
+    return 3;
   }
   return 0;
 }
@@ -55,7 +58,7 @@ static void nav_build_columns(Task *head, const char *search_query,
 
 static int nav_find_selected(const NavColumns *cols, int selected_id, int *out_col,
                              int *out_row) {
-  for (int c = 0; c < 3; c++) {
+  for (int c = 0; c < 4; c++) {
     for (int r = 0; r < cols->counts[c]; r++) {
       if (cols->items[c][r] != NULL && cols->items[c][r]->id == selected_id) {
         *out_col = c;
@@ -68,7 +71,7 @@ static int nav_find_selected(const NavColumns *cols, int selected_id, int *out_c
 }
 
 static void nav_select_first_available(const NavColumns *cols, int *selected_id) {
-  for (int c = 0; c < 3; c++) {
+  for (int c = 0; c < 4; c++) {
     if (cols->counts[c] > 0 && cols->items[c][0] != NULL) {
       *selected_id = cols->items[c][0]->id;
       return;
@@ -115,7 +118,7 @@ void tui_action_nav_horizontal(TuiAction *action, int delta_col) {
   }
 
   int target = col + delta_col;
-  if (target < 0 || target > 2 || cols.counts[target] <= 0) {
+  if (target < 0 || target > 3 || cols.counts[target] <= 0) {
     return;
   }
 

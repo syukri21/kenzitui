@@ -16,6 +16,7 @@ typedef struct PhaseSummary {
   int backlog;
   int doing;
   int need_cr;
+  int done;
   int others;
   int total;
 } PhaseSummary;
@@ -52,6 +53,9 @@ static int phase_to_column(const char *phase) {
   }
   if (strcasestr(phase, "need") != NULL && strcasestr(phase, "cr") != NULL) {
     return 2;
+  }
+  if (strcasestr(phase, "done") != NULL) {
+    return 3;
   }
   return 0;
 }
@@ -90,6 +94,8 @@ static void accumulate_phase_summary(const Task *task, PhaseSummary *summary) {
   } else if (strcasestr(task->phase, "need") != NULL &&
              strcasestr(task->phase, "cr") != NULL) {
     summary->need_cr++;
+  } else if (strcasestr(task->phase, "done") != NULL) {
+    summary->done++;
   } else {
     summary->others++;
   }
@@ -304,7 +310,7 @@ static int render_compact_card(const Task *task, int y, int x, int w,
 
 static void render_board(Task *head, int selected_id, const char *search_query,
                          int top, int bottom) {
-  static int col_scroll[3] = {0, 0, 0};
+  static int col_scroll[4] = {0, 0, 0, 0};
   const int card_h = 5;
 
   Task *visible[512];
@@ -313,15 +319,19 @@ static void render_board(Task *head, int selected_id, const char *search_query,
                                             &total_visible);
 
   int col_gap = 1;
-  int col_w = (COLS - 4 - (2 * col_gap)) / 3;
-  int col_x[3] = {1, 1 + col_w + col_gap, 1 + (col_w + col_gap) * 2};
+  int col_w = (COLS - 4 - (3 * col_gap)) / 4;
+  int col_x[4] = {1,
+                  1 + col_w + col_gap,
+                  1 + (col_w + col_gap) * 2,
+                  1 + (col_w + col_gap) * 3};
   int col_h = bottom - top + 1;
 
-  Task *mem0[256], *mem1[256], *mem2[256];
-  ColumnBucket cols[3] = {{"Backlog", mem0, 0},
+  Task *mem0[256], *mem1[256], *mem2[256], *mem3[256];
+  ColumnBucket cols[4] = {{"Backlog", mem0, 0},
                           {"Doing", mem1, 0},
-                          {"Need CR", mem2, 0}};
-  int col_points[3] = {0, 0, 0};
+                          {"Need CR", mem2, 0},
+                          {"Done", mem3, 0}};
+  int col_points[4] = {0, 0, 0, 0};
 
   for (int i = 0; i < visible_count; i++) {
     int c = phase_to_column(visible[i]->phase);
@@ -331,7 +341,7 @@ static void render_board(Task *head, int selected_id, const char *search_query,
     }
   }
 
-  for (int c = 0; c < 3; c++) {
+  for (int c = 0; c < 4; c++) {
     char title[64];
     snprintf(title, sizeof(title), "%s (%d|%d)", cols[c].name, cols[c].count,
              total_visible);
@@ -482,7 +492,7 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
     print_trim(0, COLS - 42, 40, filter, 0, 7);
   }
 
-  PhaseSummary summary = {0, 0, 0, 0, 0};
+  PhaseSummary summary = {0, 0, 0, 0, 0, 0};
   for (Task *current = head; current != NULL; current = current->next) {
     if (!matches_search(current, search_query)) {
       continue;
@@ -492,10 +502,11 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
 
   char stat_line[256];
   snprintf(stat_line, sizeof(stat_line),
-           "Backlog %d%%  Doing %d%%  Need CR %d%%  Others %d%%  (n=%d)",
+           "Backlog %d%%  Doing %d%%  Need CR %d%%  Done %d%%  Others %d%%  (n=%d)",
            percent_of(summary.backlog, summary.total),
            percent_of(summary.doing, summary.total),
            percent_of(summary.need_cr, summary.total),
+           percent_of(summary.done, summary.total),
            percent_of(summary.others, summary.total), summary.total);
   print_trim(1, 2, COLS - 4, stat_line, A_DIM, 10);
 

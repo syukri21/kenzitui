@@ -53,7 +53,13 @@ int main(int argc, char **argv) {
       int rc = preview_fetch_sprint_tasks(sprint_id, "tasks.dat", ".env",
                                           &fetched, &updated, &added, &kept);
       if (rc != 0) {
-        fprintf(stderr, "Failed to preview fetch for sprint %d.\n", sprint_id);
+        const char *err = phab_fetch_last_error();
+        if (err != NULL && err[0] != '\0') {
+          fprintf(stderr, "Failed to preview fetch for sprint %d: %s\n", sprint_id,
+                  err);
+        } else {
+          fprintf(stderr, "Failed to preview fetch for sprint %d.\n", sprint_id);
+        }
         return EXIT_FAILURE;
       }
       printf("Preview sprint %d: fetched=%zu updated=%zu added=%zu kept=%zu\n",
@@ -62,6 +68,12 @@ int main(int argc, char **argv) {
     }
 
     int rc = fetch_sprint_tasks_to_file(sprint_id, "tasks.dat", ".env");
+    if (rc != 0) {
+      const char *err = phab_fetch_last_error();
+      if (err != NULL && err[0] != '\0') {
+        fprintf(stderr, "Fetch failed for sprint %d: %s\n", sprint_id, err);
+      }
+    }
     return (rc == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 

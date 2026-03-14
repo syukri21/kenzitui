@@ -121,6 +121,11 @@ static void cycle_task_phase(Task *task) {
   if (task == NULL) {
     return;
   }
+  if (strcasestr(task->phase, "done") != NULL) {
+    strncpy(task->phase, "Backlog", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
+    return;
+  }
   if (strcasestr(task->phase, "doing") != NULL) {
     strncpy(task->phase, "Need CR", sizeof(task->phase) - 1);
     task->phase[sizeof(task->phase) - 1] = '\0';
@@ -128,7 +133,7 @@ static void cycle_task_phase(Task *task) {
   }
   if (strcasestr(task->phase, "need") != NULL &&
       strcasestr(task->phase, "cr") != NULL) {
-    strncpy(task->phase, "Backlog", sizeof(task->phase) - 1);
+    strncpy(task->phase, "Done", sizeof(task->phase) - 1);
     task->phase[sizeof(task->phase) - 1] = '\0';
     return;
   }
@@ -138,6 +143,11 @@ static void cycle_task_phase(Task *task) {
 
 static void cycle_task_phase_back(Task *task) {
   if (task == NULL) {
+    return;
+  }
+  if (strcasestr(task->phase, "done") != NULL) {
+    strncpy(task->phase, "Need CR", sizeof(task->phase) - 1);
+    task->phase[sizeof(task->phase) - 1] = '\0';
     return;
   }
   if (strcasestr(task->phase, "need") != NULL &&

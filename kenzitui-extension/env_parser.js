@@ -26,8 +26,8 @@ export function parseCookiesJsonToEnv(cookies) {
   }
 
   return [
-    `PHAB_COOKIE=${cookieParts.join('; ')}`,
-    `PHAB_USER=${phusr}`
+    `PHAB_COOKIE="${cookieParts.join('; ')}"`,
+    `PHAB_USER="${phusr}"`
   ].join('\n');
 }
 

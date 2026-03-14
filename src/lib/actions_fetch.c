@@ -6,8 +6,71 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+static void fetch_wait_for_ack(void) {
+  nodelay(stdscr, FALSE);
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
+  mvprintw(LINES - 1, 2, "Press any key to continue...");
+  refresh();
+  (void)getch();
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
+}
+
+static int fetch_read_last_log_line(char *out, size_t out_size) {
+  if (out == NULL || out_size == 0) {
+    return 0;
+  }
+  out[0] = '\0';
+
+  FILE *f = fopen("/tmp/kenzitui_fetch.log", "r");
+  if (f == NULL) {
+    return 0;
+  }
+
+  char line[512];
+  while (fgets(line, sizeof(line), f) != NULL) {
+    size_t len = strlen(line);
+    while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+      line[--len] = '\0';
+    }
+    if (line[0] == '\0') {
+      continue;
+    }
+    snprintf(out, out_size, "%s", line);
+  }
+  fclose(f);
+  return out[0] != '\0';
+}
+
+static void fetch_show_error_with_log(const char *prefix) {
+  const char *detail = phab_fetch_last_error();
+  if (detail != NULL && detail[0] != '\0') {
+    char msg[512];
+    snprintf(msg, sizeof(msg), "%s: %s", prefix != NULL ? prefix : "Fetch failed",
+             detail);
+    tui_show_status_message(msg);
+    fetch_wait_for_ack();
+    return;
+  }
+
+  char last[256];
+  if (fetch_read_last_log_line(last, sizeof(last))) {
+    char msg[512];
+    snprintf(msg, sizeof(msg), "%s: %s", prefix != NULL ? prefix : "Fetch failed",
+             last);
+    tui_show_status_message(msg);
+  } else {
+    tui_show_status_message(prefix != NULL ? prefix : "Fetch failed.");
+  }
+  fetch_wait_for_ack();
+}
 
 void tui_action_handle_fetch(TuiAction *action) {
   if (action == NULL || action->state == NULL) {
@@ -30,7 +93,8 @@ void tui_action_handle_fetch(TuiAction *action) {
   size_t fetched = 0, updated = 0, added = 0, kept = 0;
   if (preview_fetch_sprint_tasks(sprint_id, task_file, ".env", &fetched, &updated,
                                  &added, &kept) != 0) {
-    tui_show_status_message("Preview failed. Check cookie in .env.");
+    fetch_show_error_with_log(
+        "Preview failed. Check .env cookie/user or network");
     return;
   }
 
@@ -41,6 +105,11 @@ void tui_action_handle_fetch(TuiAction *action) {
   if (!tui_confirm_prompt(prompt)) {
     tui_show_status_message("Fetch canceled.");
     return;
+  }
+
+  FILE *log_reset = fopen("/tmp/kenzitui_fetch.log", "w");
+  if (log_reset != NULL) {
+    fclose(log_reset);
   }
 
   pid_t pid = fork();
@@ -95,14 +164,21 @@ void tui_action_handle_fetch(TuiAction *action) {
     return;
   }
   if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-    tui_show_status_message("Fetch failed. Check cookie in .env.");
+    if (WIFSIGNALED(status)) {
+      char msg[128];
+      snprintf(msg, sizeof(msg), "Fetch failed (signal %d)", WTERMSIG(status));
+      fetch_show_error_with_log(msg);
+    } else {
+      fetch_show_error_with_log(
+          "Fetch failed. Check .env cookie/user or network");
+    }
     return;
   }
 
   int last_id = 0;
   Task *loaded = load_tasks_from_file(task_file, &last_id);
   if (loaded == NULL) {
-    tui_show_status_message("Fetch done, but failed to reload tasks.dat.");
+    fetch_show_error_with_log("Fetch done, but failed to reload tasks.dat");
     return;
   }
 

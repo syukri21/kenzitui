@@ -6,9 +6,15 @@
 #include <string.h>
 
 void remove_trailing_newline(char *str) {
-  if (str == NULL)
+  if (str == NULL) {
     return;
-  str[strcspn(str, "\n")] = 0;
+  }
+
+  size_t len = strlen(str);
+  while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r')) {
+    str[len - 1] = '\0';
+    len--;
+  }
 }
 
 int shell_quote_single(const char *src, char *out, size_t out_size) {
