@@ -22,6 +22,7 @@ Guidance for coding agents working in this repository.
 - `include/app_state.h`: central runtime state type for TUI mode
 - `include/*.h`: public headers and shared types
 - `docs/`: usage documentation
+- `kenzitui-extension/`: Chrome extension helper subproject
 - `bin/`: compiled executables
 - `obj/`: object files
 

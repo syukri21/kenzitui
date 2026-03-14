@@ -1,121 +1,140 @@
+import { parseCookiesJsonToEnv } from './env_parser.js';
+
+const STRINGS = {
+  ready: 'Popup ready',
+  running: 'Resolving host permission and reading cookies...',
+  invalidDomain: 'Invalid domain. Example: p.cermati.com',
+  permissionDenied: 'Permission denied for this host. Approve permission prompt and retry.',
+  noCookies: 'No cookies found for this host.',
+  copied: 'ENV copied to clipboard.',
+  clipboardBlocked: 'Clipboard blocked. Use manual copy from preview.',
+  cookiesError: 'Cookie read failed. Check extension permissions.',
+  backgroundDown: 'Background worker unavailable. Reload extension.',
+};
+
 let formEl;
 let inputEl;
 let messageEl;
+let previewEl;
+let copyBtnEl;
 
 function setMessage(str) {
-  if (!messageEl) {
-    return;
-  }
+  if (!messageEl) return;
   messageEl.textContent = str;
   messageEl.hidden = false;
 }
 
-function stringToUrl(input) {
+function stringToDomain(input) {
+  if (!input) return null;
   try {
-    return new URL(input);
-  } catch (_) {
-    // ignore
+    const url = new URL(input.includes('://') ? input : `https://${input}`);
+    return url.hostname;
+  } catch {
+    return null;
   }
-  try {
-    return new URL("http://" + input);
-  } catch (_) {
-    // ignore
-  }
-  return null;
 }
 
-function parseCookiesJsonToEnv(cookies) {
-  if (!Array.isArray(cookies)) {
-    throw new Error("cookies must be an array");
-  }
-
-  const byName = new Map();
-  for (const c of cookies) {
-    if (c && typeof c.name === "string" && typeof c.value === "string") {
-      byName.set(c.name, c.value);
-    }
-  }
-
-  const orderedNames = ["phusr", "phsid", "VouchCookie"];
-  const cookieParts = [];
-
-  for (const name of orderedNames) {
-    if (byName.has(name)) {
-      cookieParts.push(`${name}=${byName.get(name)}`);
-      byName.delete(name);
-    }
-  }
-
-  for (const [name, value] of byName.entries()) {
-    cookieParts.push(`${name}=${value}`);
-  }
-
-  const phabCookie = cookieParts.join("; ");
-  const phabUser = byName.get("phusr") || cookies.find((c) => c?.name === "phusr")?.value || "";
-
-  return [
-    `PHAB_COOKIE=${phabCookie}`,
-    `PHAB_USER=${phabUser}`,
-  ].join("\n");
+function sendMessage(message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      resolve(response);
+    });
+  });
 }
 
-function parseCookiesJsonTextToEnv(jsonText) {
-  const parsed = JSON.parse(jsonText);
-  return parseCookiesJsonToEnv(parsed);
+async function ensureHostPermission(domain) {
+  const res = await sendMessage({ type: 'ensureHostPermission', domain });
+  return !!(res && res.ok && res.granted);
 }
 
-async function deleteDomainCookies(domain) {
-  console.log("[popup] deleteDomainCookies domain:", domain);
+async function getCookies(domain) {
+  const res = await sendMessage({ type: 'getCookiesForDomain', domain });
+  if (!res || !res.ok) {
+    const code = res?.code || 'UNKNOWN';
+    throw new Error(code);
+  }
+  return res.cookies || [];
+}
+
+async function copyPreviewToClipboard() {
+  const text = previewEl.value || '';
+  if (!text.trim()) {
+    setMessage('Nothing to copy yet. Fetch first.');
+    return;
+  }
   try {
-    const cookies = await chrome.cookies.getAll({ domain });
-    console.log("[popup] cookies found:", cookies.length, cookies);
-
-    if (cookies.length === 0) {
-      return "No cookies found";
-    }
-
-    const envText = parseCookiesJsonToEnv(cookies);
-    try {
-      await navigator.clipboard.writeText(envText);
-      return `Found ${cookies.length} cookie(s). ENV copied to clipboard.`;
-    } catch (clipErr) {
-      console.error("[popup] clipboard write failed:", clipErr);
-      console.log("[popup] generated env fallback:\n" + envText);
-      return `Found ${cookies.length} cookie(s). Clipboard failed, check popup console.`;
-    }
-  } catch (error) {
-    console.error("[popup] deleteDomainCookies error:", error);
-    return `Unexpected error: ${error.message}`;
+    await navigator.clipboard.writeText(text);
+    setMessage(STRINGS.copied);
+  } catch {
+    setMessage(STRINGS.clipboardBlocked);
   }
 }
 
 async function handleFormSubmit(event) {
   event.preventDefault();
-  setMessage("Running...");
+  setMessage(STRINGS.running);
 
-  const url = stringToUrl(inputEl.value);
-  if (!url) {
-    setMessage("Invalid URL");
+  const domain = stringToDomain(inputEl.value);
+  if (!domain) {
+    setMessage(STRINGS.invalidDomain);
     return;
   }
 
-  const msg = await deleteDomainCookies(url.hostname);
-  setMessage(msg);
+  let permitted = false;
+  try {
+    permitted = await ensureHostPermission(domain);
+  } catch {
+    setMessage(STRINGS.backgroundDown);
+    return;
+  }
+
+  if (!permitted) {
+    setMessage(STRINGS.permissionDenied);
+    return;
+  }
+
+  try {
+    const cookies = await getCookies(domain);
+    if (!cookies.length) {
+      previewEl.value = '';
+      setMessage(STRINGS.noCookies);
+      return;
+    }
+
+    const envText = parseCookiesJsonToEnv(cookies);
+    previewEl.value = envText;
+
+    try {
+      await navigator.clipboard.writeText(envText);
+      setMessage(STRINGS.copied);
+    } catch {
+      setMessage(STRINGS.clipboardBlocked);
+    }
+  } catch (err) {
+    console.error('[popup] getCookies error:', err);
+    setMessage(`${STRINGS.cookiesError} (${err.message})`);
+  }
 }
 
 async function initPopupWindow() {
-  formEl = document.getElementById("control-row");
-  inputEl = document.getElementById("input");
-  messageEl = document.getElementById("message");
+  formEl = document.getElementById('control-row');
+  inputEl = document.getElementById('input');
+  messageEl = document.getElementById('message');
+  previewEl = document.getElementById('env-preview');
+  copyBtnEl = document.getElementById('copy');
 
-  if (!formEl || !inputEl || !messageEl) {
-    console.error("[popup] required DOM elements not found");
+  if (!formEl || !inputEl || !messageEl || !previewEl || !copyBtnEl) {
     return;
   }
 
-  formEl.addEventListener("submit", handleFormSubmit);
-  console.log("[popup] initialized");
-  setMessage("Popup ready");
+  formEl.addEventListener('submit', handleFormSubmit);
+  copyBtnEl.addEventListener('click', copyPreviewToClipboard);
+
+  setMessage(STRINGS.ready);
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -123,13 +142,11 @@ async function initPopupWindow() {
       const url = new URL(tab.url);
       inputEl.value = url.hostname;
     }
-  } catch (error) {
-    console.error("[popup] tabs.query error:", error);
+  } catch (_) {
+    // ignore
   }
 
   inputEl.focus();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  initPopupWindow();
-});
+document.addEventListener('DOMContentLoaded', initPopupWindow);

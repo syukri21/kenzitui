@@ -9,21 +9,19 @@
   --primary-strong: #2189e6;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  width: 360px;
-  min-height: 260px;
+  width: 390px;
+  min-height: 380px;
   font-family: "Segoe UI", "Inter", system-ui, sans-serif;
   background: radial-gradient(circle at 20% 0%, #1a2a45, var(--bg) 45%);
   color: var(--text);
 }
 
 .popup {
-  margin: 14px;
+  margin: 12px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -31,30 +29,13 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-}
+.header h1 { margin: 0; font-size: 16px; font-weight: 700; }
+.header p { margin: 6px 0 12px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 
-.header p {
-  margin: 6px 0 14px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
-}
+.form { display: grid; gap: 8px; }
+.form label, .preview-label { font-size: 12px; color: var(--muted); }
 
-.form {
-  display: grid;
-  gap: 8px;
-}
-
-.form label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.form input {
+.form input, textarea {
   background: var(--bg-2);
   color: var(--text);
   border: 1px solid var(--line);
@@ -64,29 +45,34 @@ body {
   outline: none;
 }
 
-.form input::placeholder {
-  color: #7187aa;
-}
-
-.form input:focus {
+.form input::placeholder { color: #7187aa; }
+.form input:focus, textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(67, 176, 255, 0.18);
 }
 
+.actions { display: flex; gap: 8px; }
+
 .form button {
-  margin-top: 4px;
+  flex: 1;
   border: 0;
   border-radius: 10px;
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   background: linear-gradient(180deg, var(--primary), var(--primary-strong));
   color: #fff;
   cursor: pointer;
 }
 
-.form button:hover {
-  filter: brightness(1.04);
+#copy { background: linear-gradient(180deg, #4f6c95, #3e5a83); }
+
+textarea {
+  width: 100%;
+  min-height: 110px;
+  margin-top: 6px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .message {
@@ -99,8 +85,4 @@ body {
   background: #10253f;
 }
 
-.footer {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--muted);
-}
+.footer { margin-top: 6px; font-size: 11px; color: var(--muted); }

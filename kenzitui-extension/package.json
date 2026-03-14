@@ -1,0 +1,10 @@
+{
+  "name": "kenzitui-extension",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "lint": "node --check background.js && node --check popup.js && node --check env_parser.js",
+    "test": "node tests/env_parser.test.mjs"
+  }
+}

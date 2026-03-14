@@ -2,6 +2,7 @@
 
 Kenzitui is a C11 + ncurses terminal task manager with persistence in `tasks.dat`.
 It now supports direct sprint import from Phabricator (`fetch --id <sprint_id>`).
+Repository also includes `kenzitui-extension/` (Chrome extension helper for `.env` generation).
 
 ## Current Data Model
 Each task stores:

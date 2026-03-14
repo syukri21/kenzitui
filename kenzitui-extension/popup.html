@@ -10,14 +10,21 @@
     <main class="popup">
       <header class="header">
         <h1>Kenzitui Helper</h1>
-        <p>Generate `.env` values from current domain cookies.</p>
+        <p>Generate <code>.env</code> values from selected domain cookies.</p>
       </header>
 
       <form id="control-row" class="form">
         <label for="input">Domain</label>
         <input type="text" id="input" placeholder="p.cermati.com" />
-        <button id="go" type="submit">Copy ENV to Clipboard</button>
+
+        <div class="actions">
+          <button id="go" type="submit">Fetch + Build ENV</button>
+          <button id="copy" type="button">Copy ENV</button>
+        </div>
       </form>
+
+      <label for="env-preview" class="preview-label">ENV Preview</label>
+      <textarea id="env-preview" spellcheck="false" readonly></textarea>
 
       <p id="message" class="message" hidden aria-live="polite"></p>
       <footer class="footer">No data is sent anywhere.</footer>

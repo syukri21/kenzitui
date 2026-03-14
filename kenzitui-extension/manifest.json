@@ -1,15 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "Kenzitui Priority Helper",
-  "version": "0.1.0",
-  "description": "Quick priority buttons for Phabricator task forms.",
-  "host_permissions" : [
-    "*://p.cermati.com/*"
-  ],
-  "permissions": [
-    "cookies"
-  ],
+  "name": "Kenzitui Helper",
+  "version": "0.2.0",
+  "description": "Generate .env values from Phabricator cookies.",
+  "permissions": ["cookies", "storage", "permissions", "tabs"],
+  "host_permissions": ["*://p.cermati.com/*"],
+  "optional_host_permissions": ["*://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "action": {
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

@@ -155,6 +155,7 @@ It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, an
   - `actions_fetch.c`: preview + async/cancel fetch action
   - `input_ui.c`: prompt/status/input helpers
 - `include/`: Header files defining the data models and action systems.
+- `kenzitui-extension/`: Chrome extension helper to generate `.env` (`PHAB_COOKIE`, `PHAB_USER`) from selected host cookies.
 - `bin/`: Compiled executables.
 - `obj/`: Object files (.o).
 - `Makefile`: Build system configuration.
