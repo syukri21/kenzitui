@@ -18,6 +18,8 @@ OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 # Test files
 TEST_SRC = src/main_task_test.c
 TEST_TARGET = $(BIN_DIR)/test_task
+FETCH_TEST_SRC = src/main_fetch_test.c
+FETCH_TEST_TARGET = $(BIN_DIR)/test_fetch
 
 all: $(TARGET)
 
@@ -33,10 +35,16 @@ $(BIN_DIR):
 $(OBJ_DIR):
 	mkdir -p $@/lib
 
-# Target to build and run the task test
-test: $(TEST_SRC) | $(BIN_DIR)
+# Target to build and run tests
+test: $(TEST_TARGET) $(FETCH_TEST_TARGET)
 	./$(TEST_TARGET)
-	$(CC) $(CFLAGS) $(TEST_SRC) $(SRC) -o $(TEST_TARGET)
+	./$(FETCH_TEST_TARGET)
+
+$(TEST_TARGET): $(TEST_SRC) $(LIB) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $(TEST_SRC) $(LIB) -o $(TEST_TARGET) $(LDFLAGS)
+
+$(FETCH_TEST_TARGET): $(FETCH_TEST_SRC) $(LIB) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $(FETCH_TEST_SRC) $(LIB) -o $(FETCH_TEST_TARGET) $(LDFLAGS)
 
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) compile_commands.json

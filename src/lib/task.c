@@ -158,12 +158,99 @@ void save_tasks_to_file(Task *head, const char *filename) {
 
   Task *current = head;
   while (current != NULL) {
-    fprintf(file,
-            "%d,%s,%s,%s,%s,%d,%d,%s,%d,%s,%s,%s\n",
-            current->id, current->name, current->description, current->project,
-            current->path, current->is_done, current->priority, current->phase,
-            current->points, current->tags, current->ticket,
-            current->next_sprint_meeting);
+    fprintf(file, "%d,", current->id);
+
+    const char *string_fields[] = {current->name,
+                                   current->description,
+                                   current->project,
+                                   current->path};
+    for (size_t i = 0; i < 4; i++) {
+      const char *value = string_fields[i] != NULL ? string_fields[i] : "";
+      int needs_quotes = 0;
+      for (const char *p = value; *p != '\0'; p++) {
+        if (*p == ',' || *p == '"' || *p == '\n' || *p == '\r') {
+          needs_quotes = 1;
+          break;
+        }
+      }
+
+      if (!needs_quotes) {
+        fprintf(file, "%s,", value);
+      } else {
+        fputc('"', file);
+        for (const char *p = value; *p != '\0'; p++) {
+          if (*p == '"') {
+            fputc('"', file);
+          }
+          fputc(*p, file);
+        }
+        fputc('"', file);
+        fputc(',', file);
+      }
+    }
+
+    fprintf(file, "%d,%d,", current->is_done, current->priority);
+
+    const char *phab_fields[] = {
+        current->phase, current->tags, current->ticket, current->next_sprint_meeting};
+    const int phab_points = current->points;
+
+    // phase
+    const char *phase = phab_fields[0] != NULL ? phab_fields[0] : "";
+    int phase_quotes = 0;
+    for (const char *p = phase; *p != '\0'; p++) {
+      if (*p == ',' || *p == '"' || *p == '\n' || *p == '\r') {
+        phase_quotes = 1;
+        break;
+      }
+    }
+    if (!phase_quotes) {
+      fprintf(file, "%s,", phase);
+    } else {
+      fputc('"', file);
+      for (const char *p = phase; *p != '\0'; p++) {
+        if (*p == '"') {
+          fputc('"', file);
+        }
+        fputc(*p, file);
+      }
+      fputc('"', file);
+      fputc(',', file);
+    }
+
+    // points
+    fprintf(file, "%d,", phab_points);
+
+    // tags, ticket, next_sprint_meeting
+    for (size_t i = 1; i < 4; i++) {
+      const char *value = phab_fields[i] != NULL ? phab_fields[i] : "";
+      int needs_quotes = 0;
+      for (const char *p = value; *p != '\0'; p++) {
+        if (*p == ',' || *p == '"' || *p == '\n' || *p == '\r') {
+          needs_quotes = 1;
+          break;
+        }
+      }
+
+      if (!needs_quotes) {
+        fprintf(file, "%s", value);
+      } else {
+        fputc('"', file);
+        for (const char *p = value; *p != '\0'; p++) {
+          if (*p == '"') {
+            fputc('"', file);
+          }
+          fputc(*p, file);
+        }
+        fputc('"', file);
+      }
+
+      if (i < 3) {
+        fputc(',', file);
+      }
+    }
+
+    fputc('\n', file);
     current = current->next;
   }
 
@@ -171,24 +258,55 @@ void save_tasks_to_file(Task *head, const char *filename) {
 }
 
 static int split_csv(char *line, char **fields, int max_fields) {
-  int count = 0;
-  char *cursor = line;
-
   if (line == NULL || fields == NULL || max_fields <= 0) {
     return 0;
   }
 
-  // Preserve empty fields (",,") and trailing empty fields ("...,").
-  while (count < max_fields) {
-    fields[count++] = cursor;
-    char *comma = strchr(cursor, ',');
-    if (comma == NULL) {
-      break;
+  int count = 0;
+  char *src = line;
+  char *dst = line;
+  int in_quotes = 0;
+  int at_field_start = 1;
+
+  fields[count++] = dst;
+
+  while (*src != '\0') {
+    char ch = *src++;
+
+    if (in_quotes) {
+      if (ch == '"') {
+        if (*src == '"') {
+          *dst++ = '"';
+          src++;
+        } else {
+          in_quotes = 0;
+        }
+      } else {
+        *dst++ = ch;
+      }
+      at_field_start = 0;
+      continue;
     }
-    *comma = '\0';
-    cursor = comma + 1;
+
+    if (ch == ',' && !in_quotes) {
+      *dst++ = '\0';
+      if (count < max_fields) {
+        fields[count++] = dst;
+      }
+      at_field_start = 1;
+      continue;
+    }
+
+    if (ch == '"' && at_field_start) {
+      in_quotes = 1;
+      continue;
+    }
+
+    *dst++ = ch;
+    at_field_start = 0;
   }
 
+  *dst = '\0';
   return count;
 }
 

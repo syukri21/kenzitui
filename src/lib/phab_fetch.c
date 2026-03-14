@@ -908,3 +908,21 @@ int fetch_sprint_tasks_to_file(int sprint_id, const char *output_path,
   printf("Imported %zu task(s) into %s\n", count, output_path);
   return 0;
 }
+
+int phab_extract_phase_and_points_for_test(const char *html, const char *phid,
+                                           char *out_phase,
+                                           size_t out_phase_size,
+                                           int *out_points) {
+  if (html == NULL || phid == NULL || out_phase == NULL || out_points == NULL ||
+      out_phase_size == 0) {
+    return 0;
+  }
+
+  extract_phase_from_phid(html, phid, out_phase, out_phase_size);
+  int points = extract_points_from_phid_card(html, phid);
+  if (points < 0) {
+    points = extract_points_from_phid(html, phid);
+  }
+  *out_points = points;
+  return 1;
+}

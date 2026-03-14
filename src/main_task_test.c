@@ -16,6 +16,13 @@ void test_task_logic() {
   Task *t2 = create_task(2, "Task 2", "Desc 2", "Proj 2", "/tmp", MEDIUM);
   task_set_phab_fields(t2, "Backlog", 3, "", "T2", "");
   add_task(&head, t2);
+
+  Task *t3 =
+      create_task(3, "Task, \"Quoted\"", "Desc, with \"quotes\"",
+                  "Proj,3", "/tmp/a,b", LOW);
+  task_set_phab_fields(t3, "Need CR", 8, "tag-one|tag,with,comma",
+                       "T\"3,EX", "2026-04-01");
+  add_task(&head, t3);
   assert(head != NULL);
   assert(head->id == 1);
   assert(head->next->id == 2);
@@ -44,12 +51,27 @@ void test_task_logic() {
   assert(strcmp(loaded_head->next->tags, "") == 0);
   assert(strcmp(loaded_head->next->ticket, "T2") == 0);
   assert(strcmp(loaded_head->next->next_sprint_meeting, "") == 0);
-  assert(last_id == 2);
+  assert(loaded_head->next->next != NULL);
+  assert(loaded_head->next->next->id == 3);
+  assert(strcmp(loaded_head->next->next->name, "Task, \"Quoted\"") == 0);
+  assert(strcmp(loaded_head->next->next->description, "Desc, with \"quotes\"") ==
+         0);
+  assert(strcmp(loaded_head->next->next->project, "Proj,3") == 0);
+  assert(strcmp(loaded_head->next->next->path, "/tmp/a,b") == 0);
+  assert(strcmp(loaded_head->next->next->phase, "Need CR") == 0);
+  assert(loaded_head->next->next->points == 8);
+  assert(strcmp(loaded_head->next->next->tags, "tag-one|tag,with,comma") == 0);
+  assert(strcmp(loaded_head->next->next->ticket, "T\"3,EX") == 0);
+  assert(strcmp(loaded_head->next->next->next_sprint_meeting, "2026-04-01") ==
+         0);
+  assert(last_id == 3);
 
   // Test Delete
   delete_task(&head, 1);
   assert(head->id == 2);
   delete_task(&head, 2);
+  assert(head->id == 3);
+  delete_task(&head, 3);
   assert(head == NULL);
 
   free_all_tasks(loaded_head);
