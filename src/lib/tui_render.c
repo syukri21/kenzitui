@@ -533,11 +533,12 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
 
   char footer[256];
   snprintf(footer, sizeof(footer),
-           "%c/%c phase  %c/%c up-down  SPACE done  %c fetch  %c add  %c edit  %c delete  %c priority  %c next-phase  %c prev-phase  %c search  %c clear  %c open  %c open-context  q quit",
+           "%c/%c phase  %c/%c up-down  SPACE done  %c fetch  %c add  %c edit  %c delete  %c priority  %c next-phase  %c prev-phase  %c search  %c clear  %c open  %c open-context  %c gen-context  q quit",
            cfg->keys.nav_left, cfg->keys.nav_right, cfg->keys.nav_down,
            cfg->keys.nav_up, cfg->keys.fetch, cfg->keys.add, cfg->keys.edit,
            cfg->keys.del, cfg->keys.priority, cfg->keys.move_next_phase,
            cfg->keys.move_prev_phase, cfg->keys.search,
-           cfg->keys.clear_search, cfg->keys.open, cfg->keys.open_context);
+           cfg->keys.clear_search, cfg->keys.open, cfg->keys.open_context,
+           cfg->keys.generate_context);
   print_trim(LINES - 1, 2, COLS - 4, footer, A_DIM, 5);
 }

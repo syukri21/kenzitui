@@ -98,6 +98,7 @@ void app_config_set_defaults(void) {
   g_cfg.keys.move_prev_phase = 'M';
   g_cfg.keys.open = 'o';
   g_cfg.keys.open_context = 'O';
+  g_cfg.keys.generate_context = '0';
   g_cfg.keys.done = ' ';
   g_cfg.keys.nav_left = 'h';
   g_cfg.keys.nav_up = 'k';
@@ -168,6 +169,9 @@ void app_config_load(const char *path) {
       g_cfg.keys.open = parse_key(value, g_cfg.keys.open);
     } else if (strcmp(key, "key.open_context") == 0) {
       g_cfg.keys.open_context = parse_key(value, g_cfg.keys.open_context);
+    } else if (strcmp(key, "key.generate_context") == 0) {
+      g_cfg.keys.generate_context =
+          parse_key(value, g_cfg.keys.generate_context);
     } else if (strcmp(key, "key.done") == 0) {
       g_cfg.keys.done = parse_key(value, g_cfg.keys.done);
     } else if (strcmp(key, "key.nav_left") == 0) {

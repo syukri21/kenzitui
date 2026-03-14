@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 void test_shell_quote() {
   char out[128];
@@ -103,9 +104,28 @@ void test_task_logic() {
 
 void test_context_generation_and_compat() {
   char out[MAX_PATH];
+
+  char orig_cwd[1024];
+  assert(getcwd(orig_cwd, sizeof(orig_cwd)) != NULL);
+  char tmpdir[] = "/tmp/kenzitui_ctx_test_XXXXXX";
+  assert(mkdtemp(tmpdir) != NULL);
+  assert(chdir(tmpdir) == 0);
+
   unsetenv("OBSIDIAN_PATH");
+  unsetenv("KENZITUI_OBSIDIAN_PATH");
   assert(task_build_context_path(out, sizeof(out), "T123",
                                  "[Ledger Service] Create Credit API") == 0);
+
+  FILE *envf = fopen(".env", "w");
+  assert(envf != NULL);
+  fprintf(envf, "OBSIDIAN_PATH=/vault_from_env\n");
+  fclose(envf);
+  assert(task_build_context_path(out, sizeof(out), "T123",
+                                 "[Ledger Service] Create Credit API") == 1);
+  assert(strcmp(out,
+                "/vault_from_env/LedgerService/T123_Create_Credit_API.md") ==
+         0);
+  remove(".env");
 
   setenv("OBSIDIAN_PATH", "/vault", 1);
   assert(task_build_context_path(out, sizeof(out), "T148272",
@@ -132,6 +152,9 @@ void test_context_generation_and_compat() {
   assert(strcmp(loaded->context_path, "") == 0);
   free_all_tasks(loaded);
   remove("/tmp/kenzitui_old_format.dat");
+
+  assert(chdir(orig_cwd) == 0);
+  rmdir(tmpdir);
 }
 
 int main() {

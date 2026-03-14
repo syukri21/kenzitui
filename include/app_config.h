@@ -13,6 +13,7 @@ typedef struct AppKeyConfig {
   int move_prev_phase;
   int open;
   int open_context;
+  int generate_context;
   int done;
   int nav_left;
   int nav_up;

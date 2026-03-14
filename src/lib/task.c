@@ -21,6 +21,68 @@ static void copy_str(char *dst, size_t dst_size, const char *src) {
   dst[dst_size - 1] = '\0';
 }
 
+static int load_obsidian_root(char *out, size_t out_size) {
+  if (out == NULL || out_size == 0) {
+    return 0;
+  }
+  out[0] = '\0';
+
+  const char *root = getenv("OBSIDIAN_PATH");
+  if (root != NULL && root[0] != '\0') {
+    copy_str(out, out_size, root);
+    return 1;
+  }
+  root = getenv("KENZITUI_OBSIDIAN_PATH");
+  if (root != NULL && root[0] != '\0') {
+    copy_str(out, out_size, root);
+    return 1;
+  }
+
+  FILE *f = fopen(".env", "r");
+  if (f == NULL) {
+    return 0;
+  }
+
+  char line[1024];
+  while (fgets(line, sizeof(line), f) != NULL) {
+    if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') {
+      continue;
+    }
+    const char *value = NULL;
+    if (strncmp(line, "OBSIDIAN_PATH=", 14) == 0) {
+      value = line + 14;
+    } else if (strncmp(line, "KENZITUI_OBSIDIAN_PATH=", 23) == 0) {
+      value = line + 23;
+    } else {
+      continue;
+    }
+
+    while (*value == ' ' || *value == '\t') {
+      value++;
+    }
+
+    copy_str(out, out_size, value);
+    remove_trailing_newline(out);
+    size_t len = strlen(out);
+    if (len >= 2 &&
+        ((out[0] == '"' && out[len - 1] == '"') ||
+         (out[0] == '\'' && out[len - 1] == '\''))) {
+      memmove(out, out + 1, len - 2);
+      out[len - 2] = '\0';
+      len -= 2;
+    }
+
+    if (len > 0) {
+      fclose(f);
+      return 1;
+    }
+    out[0] = '\0';
+  }
+
+  fclose(f);
+  return 0;
+}
+
 static int append_char(char *out, size_t out_size, size_t *w, char ch) {
   if (out == NULL || w == NULL || *w + 1 >= out_size) {
     return 0;
@@ -125,8 +187,8 @@ int task_build_context_path(char *out, size_t out_size, const char *ticket,
   }
   out[0] = '\0';
 
-  const char *root = getenv("OBSIDIAN_PATH");
-  if (root == NULL || root[0] == '\0') {
+  char root[MAX_PATH];
+  if (!load_obsidian_root(root, sizeof(root))) {
     return 0;
   }
 

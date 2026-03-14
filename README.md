@@ -52,6 +52,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 | `c`       | Clear Search         |
 | `o`       | Open Path in Neovim  |
 | `O`       | Open Context File    |
+| `0`       | Generate/Open Context |
 | `q`       | Quit and Save        |
 
 Delete behavior:
@@ -63,8 +64,13 @@ Open behavior (`o`):
 - In tmux, switches to an existing pane if that same path is already open; otherwise creates a new window.
 
 Open context behavior (`O`):
-- Opens `context_path` with the same safe/tmux logic as `o`.
+- Opens `context_path` as a file in Neovim.
 - Shows status message if `context_path` is empty.
+
+Generate/open context behavior (`0`):
+- If `context_path` is empty or `-`, Kenzitui generates it and saves immediately.
+- Then it creates missing parent folders/file and opens the note in Neovim.
+- If `context_path` already exists, it opens directly.
 
 ## 🚀 Getting Started
 
@@ -118,7 +124,7 @@ Quick setup:
 ```bash
 cp env.example .env
 # then fill PHAB_COOKIE in .env
-# optional: set OBSIDIAN_PATH for context note auto-generation
+# optional: set OBSIDIAN_PATH for context note auto-generation/open with key 0
 ```
 
 Security notes for `.env`:
@@ -153,7 +159,11 @@ The loader remains backward-compatible with older 7-field task rows.
 It also preserves empty CSV fields (`...,,...`) so `phase`, `points`, `tags`, and `ticket` stay mapped correctly.
 
 Context auto-generation:
-- If task `context_path` is empty and `OBSIDIAN_PATH` is set, Kenzitui generates:
+- Obsidian root source order:
+  - `OBSIDIAN_PATH` environment variable
+  - `KENZITUI_OBSIDIAN_PATH` environment variable
+  - `.env` (`OBSIDIAN_PATH=` or `KENZITUI_OBSIDIAN_PATH=`)
+- If task `context_path` is empty and root path exists, Kenzitui generates:
   - `<OBSIDIAN_PATH>/<Subfolder>/<ticket>_<task_name_slug>.md`
 - Bracket prefix folder example:
   - `[Ledger Service] Create Credit API` -> `LedgerService/T148272_Create_Credit_API.md`

@@ -3,10 +3,12 @@
 #include "kenzutls.h"
 #include "tuiaction_actions.h"
 #include <ctype.h>
+#include <errno.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 static void persist(AppState *state) {
@@ -26,6 +28,28 @@ static Task *find_selected(AppState *state) {
     }
   }
   return NULL;
+}
+
+static int is_missing_context_path(const char *path) {
+  if (path == NULL) {
+    return 1;
+  }
+  const char *start = path;
+  while (*start != '\0' && isspace((unsigned char)*start)) {
+    start++;
+  }
+  const char *end = start + strlen(start);
+  while (end > start && isspace((unsigned char)end[-1])) {
+    end--;
+  }
+  size_t len = (size_t)(end - start);
+  if (len == 0) {
+    return 1;
+  }
+  if (len == 1 && start[0] == '-') {
+    return 1;
+  }
+  return 0;
 }
 
 static int resolve_open_path(const char *raw, char *out, size_t out_size) {
@@ -183,6 +207,178 @@ static void open_target_path(const Task *current, const char *raw_path,
       tui_show_status_message(failed_message != NULL
                                   ? failed_message
                                   : "Failed to open nvim for selected path.");
+    }
+    reset_prog_mode();
+    refresh();
+  }
+}
+
+static int ensure_dir_recursive(const char *dir_path) {
+  if (dir_path == NULL || dir_path[0] == '\0') {
+    return 0;
+  }
+  if (strcmp(dir_path, ".") == 0 || strcmp(dir_path, "/") == 0) {
+    return 1;
+  }
+
+  char tmp[MAX_PATH];
+  if (snprintf(tmp, sizeof(tmp), "%s", dir_path) >= (int)sizeof(tmp)) {
+    return 0;
+  }
+
+  size_t len = strlen(tmp);
+  if (len == 0) {
+    return 0;
+  }
+  if (len > 1 && tmp[len - 1] == '/') {
+    tmp[len - 1] = '\0';
+  }
+
+  for (char *p = tmp + 1; *p != '\0'; p++) {
+    if (*p == '/') {
+      *p = '\0';
+      if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+        return 0;
+      }
+      *p = '/';
+    }
+  }
+
+  if (mkdir(tmp, 0755) != 0 && errno != EEXIST) {
+    return 0;
+  }
+  return 1;
+}
+
+static int split_parent_and_name(const char *full_path, char *parent,
+                                 size_t parent_size, char *name,
+                                 size_t name_size) {
+  if (full_path == NULL || parent == NULL || name == NULL || parent_size == 0 ||
+      name_size == 0) {
+    return 0;
+  }
+
+  const char *slash = strrchr(full_path, '/');
+  if (slash == NULL) {
+    if (snprintf(parent, parent_size, ".") >= (int)parent_size) {
+      return 0;
+    }
+    if (snprintf(name, name_size, "%s", full_path) >= (int)name_size) {
+      return 0;
+    }
+    return 1;
+  }
+
+  size_t parent_len = (size_t)(slash - full_path);
+  if (parent_len == 0) {
+    if (snprintf(parent, parent_size, "/") >= (int)parent_size) {
+      return 0;
+    }
+  } else {
+    if (parent_len + 1 > parent_size) {
+      return 0;
+    }
+    memcpy(parent, full_path, parent_len);
+    parent[parent_len] = '\0';
+  }
+
+  if (snprintf(name, name_size, "%s", slash + 1) >= (int)name_size) {
+    return 0;
+  }
+  return 1;
+}
+
+static void open_context_file_target(const Task *current, const char *raw_path,
+                                     const char *empty_message,
+                                     const char *failed_message) {
+  if (current == NULL || is_missing_context_path(raw_path)) {
+    tui_show_status_message(
+        empty_message != NULL ? empty_message : "Context path is empty.");
+    return;
+  }
+
+  char resolved_file[MAX_PATH];
+  if (!resolve_open_path(raw_path, resolved_file, sizeof(resolved_file))) {
+    tui_show_status_message("Context path too long.");
+    return;
+  }
+
+  char parent[MAX_PATH];
+  char file_name[MAX_PATH];
+  if (!split_parent_and_name(resolved_file, parent, sizeof(parent), file_name,
+                             sizeof(file_name))) {
+    tui_show_status_message("Invalid context path.");
+    return;
+  }
+  if (file_name[0] == '\0') {
+    tui_show_status_message("Context file name is empty.");
+    return;
+  }
+
+  if (!ensure_dir_recursive(parent)) {
+    tui_show_status_message("Failed creating context directory.");
+    return;
+  }
+
+  FILE *touch = fopen(resolved_file, "a");
+  if (touch == NULL) {
+    tui_show_status_message("Failed creating context file.");
+    return;
+  }
+  fclose(touch);
+
+  char q_parent[(MAX_PATH * 5) + 8];
+  char q_file[(MAX_PATH * 5) + 8];
+  if (!shell_quote_single(parent, q_parent, sizeof(q_parent)) ||
+      !shell_quote_single(resolved_file, q_file, sizeof(q_file))) {
+    tui_show_status_message("Context path too long for shell escaping.");
+    return;
+  }
+
+  char command[4096];
+  if (getenv("TMUX")) {
+    char window_name[64];
+    char target_window[128];
+    char target_pane[64];
+    char q_target_window[(128 * 5) + 8];
+    char q_target_pane[(64 * 5) + 8];
+    char q_window_name[(64 * 5) + 8];
+    if (find_tmux_target_for_path(parent, target_window, sizeof(target_window),
+                                  target_pane, sizeof(target_pane))) {
+      if (!shell_quote_single(target_window, q_target_window,
+                              sizeof(q_target_window)) ||
+          !shell_quote_single(target_pane, q_target_pane,
+                              sizeof(q_target_pane))) {
+        tui_show_status_message("tmux target too long for shell escaping.");
+        return;
+      }
+      snprintf(command, sizeof(command),
+               "tmux select-window -t %s && tmux select-pane -t %s",
+               q_target_window, q_target_pane);
+    } else {
+      build_tmux_window_name(current, window_name, sizeof(window_name));
+      if (!shell_quote_single(window_name, q_window_name,
+                              sizeof(q_window_name))) {
+        tui_show_status_message("Window name too long for shell escaping.");
+        return;
+      }
+      snprintf(command, sizeof(command),
+               "tmux new-window -c %s -n %s \"nvim %s\"", q_parent,
+               q_window_name, q_file);
+    }
+    if (system(command) != 0) {
+      tui_show_status_message(failed_message != NULL
+                                  ? failed_message
+                                  : "Failed to open context file.");
+    }
+  } else {
+    def_prog_mode();
+    endwin();
+    snprintf(command, sizeof(command), "cd -- %s && nvim %s", q_parent, q_file);
+    if (system(command) != 0) {
+      tui_show_status_message(failed_message != NULL
+                                  ? failed_message
+                                  : "Failed to open context file.");
     }
     reset_prog_mode();
     refresh();
@@ -409,6 +605,32 @@ void tui_action_open_context_path(TuiAction *action) {
   if (current == NULL) {
     return;
   }
-  open_target_path(current, current->context_path, "Context path is empty.",
-                   "Failed to open context path.");
+  open_context_file_target(current, current->context_path,
+                           "Context path is empty.",
+                           "Failed to open context path.");
+}
+
+void tui_action_generate_context_path(TuiAction *action) {
+  if (action == NULL || action->state == NULL) {
+    return;
+  }
+  Task *current = find_selected(action->state);
+  if (current == NULL) {
+    return;
+  }
+
+  if (is_missing_context_path(current->context_path)) {
+    current->context_path[0] = '\0';
+    task_auto_fill_context_path(current);
+    if (is_missing_context_path(current->context_path)) {
+      tui_show_status_message(
+          "Context path generation failed. Set OBSIDIAN_PATH first.");
+      return;
+    }
+    persist(action->state);
+  }
+
+  open_context_file_target(current, current->context_path,
+                           "Context path is empty.",
+                           "Failed to open context path.");
 }

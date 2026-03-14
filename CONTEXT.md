@@ -83,10 +83,16 @@ Build portability:
 - `d`: delete requires confirmation (`y/N`).
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - `o`: expands `~` path to `$HOME` and opens Neovim at task path as working directory.
-- `O`: opens task `context_path` using same safe/tmux logic as `o`.
+- `O`: opens task `context_path` as a file in Neovim.
+- `0`: if `context_path` is empty/`-`, generate then persist and open note file; if already set, open directly.
 - In tmux, `o` reuses an existing pane if the same path is already open; otherwise it creates a new tmux window.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.
+
+Context root source order for generation (`0`):
+1. `OBSIDIAN_PATH` env var
+2. `KENZITUI_OBSIDIAN_PATH` env var
+3. `.env` (`OBSIDIAN_PATH=` or `KENZITUI_OBSIDIAN_PATH=`)
 
 ## Runtime State Model
 - `AppState` is the single source of truth for interactive mode:

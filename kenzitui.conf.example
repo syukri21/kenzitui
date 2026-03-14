@@ -13,6 +13,7 @@ key.move_next_phase=m
 key.move_prev_phase=M
 key.open=o
 key.open_context=O
+key.generate_context=0
 key.done=space
 key.nav_left=h
 key.nav_up=k

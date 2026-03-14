@@ -73,8 +73,9 @@ Guidance for coding agents working in this repository.
   - open nvim with task path as working directory
   - in tmux, reuse existing pane for same path instead of opening duplicate windows
 - Keep open-context behavior stable:
-  - key `O` opens `context_path`
-  - if `context_path` empty, show status message
+  - key `O` opens `context_path` as file in nvim
+  - if `context_path` empty/`-`, show status message
+  - key `0` generates `context_path` when empty/`-`, persists it, then opens file; if already set, open directly
 - Keep backup behavior intact: saving tasks should refresh `tasks.dat.bak`.
 - Keep restore command working (`restore --from <backup>` copies backup to `tasks.dat`).
 - Avoid storing raw credentials in tracked files.
@@ -93,6 +94,12 @@ Guidance for coding agents working in this repository.
   2. `PHAB_USER`
   3. `.env` (`KENZITUI_PHAB_USER=` or `PHAB_USER=`)
   4. fallback `USER`
+
+## Obsidian Path Source
+- Context generation (`0`) source precedence:
+  1. `OBSIDIAN_PATH`
+  2. `KENZITUI_OBSIDIAN_PATH`
+  3. `.env` (`OBSIDIAN_PATH=` or `KENZITUI_OBSIDIAN_PATH=`)
 
 ## Agent Workflow
 1. Inspect related headers and implementation files before editing.
