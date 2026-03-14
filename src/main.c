@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#include "app_config.h"
+#include "kenzutls.h"
 #include "phab_fetch.h"
 #include "task.h"
 #include "tui_render.h"
@@ -36,6 +38,8 @@ static int has_flag(int argc, char **argv, const char *flag) {
 }
 
 int main(int argc, char **argv) {
+  app_config_load(".kenzitui.conf");
+
   if (argc > 1 && strcmp(argv[1], "fetch") == 0) {
     int sprint_id = 0;
     if (!parse_fetch_id_arg(argc, argv, &sprint_id) || sprint_id <= 0) {
@@ -58,6 +62,24 @@ int main(int argc, char **argv) {
 
     int rc = fetch_sprint_tasks_to_file(sprint_id, "tasks.dat", ".env");
     return (rc == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+  }
+
+  if (argc > 1 && strcmp(argv[1], "restore") == 0) {
+    const char *from = "tasks.dat.bak";
+    for (int i = 2; i < argc; i++) {
+      if (strcmp(argv[i], "--from") == 0 && i + 1 < argc) {
+        from = argv[i + 1];
+        i++;
+      } else if (strncmp(argv[i], "--from=", 7) == 0) {
+        from = argv[i] + 7;
+      }
+    }
+    if (!copy_file_binary(from, "tasks.dat")) {
+      fprintf(stderr, "Failed to restore from %s to tasks.dat\n", from);
+      return EXIT_FAILURE;
+    }
+    printf("Restored tasks.dat from %s\n", from);
+    return EXIT_SUCCESS;
   }
 
   initscr();
@@ -93,6 +115,7 @@ int main(int argc, char **argv) {
     refresh();
 
     action.ch = getch();
+    ch = action.ch;
     execute(&action);
   }
 

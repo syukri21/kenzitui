@@ -25,6 +25,7 @@ Loader is backward-compatible with legacy 7-field rows.
 
 ## Current Architecture
 - `src/main.c`: app entry; handles CLI mode (`fetch`) or starts ncurses UI.
+- `src/lib/app_config.c`: loads `.kenzitui.conf` overrides for keys/colors/compact fields.
 - `src/lib/task.c`: task CRUD + file load/save logic.
 - `src/lib/tuiaction.c`: key handling, board-aware movement (`h/j/k/l`), phase move (`m`/`M`), and autosave on task mutations.
 - `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`) with per-column point totals in header (`P:<sum>`).
@@ -54,6 +55,7 @@ Keep real cookies local and rotate them when expired or exposed.
 - Build: `make`
 - Run UI: `./bin/kenzitui`
 - Fetch sprint: `./bin/kenzitui fetch --id <sprint_id>`
+- Restore backup: `./bin/kenzitui restore --from tasks.dat.bak`
 - Logic test: `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/lib/*.c -o bin/test_task -lncurses && ./bin/test_task`
 
 ## Current Interaction Model
@@ -64,3 +66,4 @@ Keep real cookies local and rotate them when expired or exposed.
 - `d`: delete requires confirmation (`y/N`).
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
+- Save flow also maintains `tasks.dat.bak` backup before overwriting.

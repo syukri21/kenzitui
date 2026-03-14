@@ -67,6 +67,11 @@ sudo apt install libncurses-dev
 2.  **Run**: Execute `./bin/kenzitui`.
 3.  **Clean**: Run `make clean` to remove build artifacts.
 
+Restore from backup:
+```bash
+./bin/kenzitui restore --from tasks.dat.bak
+```
+
 ### 🔄 Fetch Sprint Tasks (Phabricator)
 Import sprint tasks directly into `tasks.dat`:
 ```bash
@@ -99,6 +104,17 @@ Security notes for `.env`:
 - Never commit real cookies (`PHAB_COOKIE` / `KENZITUI_PHAB_COOKIE`) to git.
 - Keep `.env` local only and rotate cookie immediately if it was exposed.
 - If fetch starts failing with auth errors, refresh cookie from browser, update `.env`, and retry.
+
+## ⚙️ UI Config
+You can override keybinds/colors/compact card fields using `.kenzitui.conf`.
+Start from:
+```bash
+cp kenzitui.conf.example .kenzitui.conf
+```
+
+## 💽 Backup Safety
+- Every save writes a backup file first: `tasks.dat.bak`.
+- Use restore command to roll back quickly.
 
 ## 🧰 Troubleshooting Fetch
 - `Fetch failed. Check cookie in .env.`:

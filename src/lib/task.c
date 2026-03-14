@@ -151,6 +151,12 @@ void free_all_tasks(Task *head) {
 }
 
 void save_tasks_to_file(Task *head, const char *filename) {
+  if (filename != NULL && filename[0] != '\0') {
+    char backup[512];
+    snprintf(backup, sizeof(backup), "%s.bak", filename);
+    (void)copy_file_binary(filename, backup);
+  }
+
   FILE *file = fopen(filename, "w");
   if (file == NULL) {
     return;

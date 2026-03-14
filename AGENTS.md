@@ -10,6 +10,7 @@ Guidance for coding agents working in this repository.
 
 ## Repository Layout
 - `src/main.c`: CLI entry (`fetch`) + ncurses app loop
+- `src/lib/app_config.c`: runtime config loader (`.kenzitui.conf`)
 - `src/lib/task.c`: task model + persistence (`tasks.dat`)
 - `src/lib/tui_render.c`: rendering layer for ncurses UI
 - `src/lib/tuiaction.c`: keyboard actions and input flows
@@ -58,6 +59,8 @@ Guidance for coding agents working in this repository.
   - CLI supports `fetch --id <id> --preview` without writing files
   - TUI `f` shows preview counts and requires confirmation before apply
 - Keep open-path command execution shell-safe (quote/escape user-controlled strings).
+- Keep backup behavior intact: saving tasks should refresh `tasks.dat.bak`.
+- Keep restore command working (`restore --from <backup>` copies backup to `tasks.dat`).
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
 - Avoid breaking core actions: add/edit/delete/toggle/search/open path/quit-save.

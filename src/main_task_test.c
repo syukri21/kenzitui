@@ -1,7 +1,23 @@
+#include "kenzutls.h"
 #include "task.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+void test_shell_quote() {
+  char out[128];
+  assert(shell_quote_single("abc", out, sizeof(out)) == 1);
+  assert(strcmp(out, "'abc'") == 0);
+
+  assert(shell_quote_single("a'b", out, sizeof(out)) == 1);
+  assert(strcmp(out, "'a'\\''b'") == 0);
+
+  assert(shell_quote_single("", out, sizeof(out)) == 1);
+  assert(strcmp(out, "''") == 0);
+
+  char tiny[4];
+  assert(shell_quote_single("abcdef", tiny, sizeof(tiny)) == 0);
+}
 
 void test_task_logic() {
   Task *head = NULL;
@@ -79,6 +95,7 @@ void test_task_logic() {
 }
 
 int main() {
+  test_shell_quote();
   test_task_logic();
   return 0;
 }

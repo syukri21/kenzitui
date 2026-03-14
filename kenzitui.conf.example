@@ -1,0 +1,34 @@
+# Local UI configuration for KENZITUI
+# Copy to .kenzitui.conf and edit values.
+
+# Keys (single character; use "space" for SPACE)
+key.search=/
+key.clear_search=c
+key.fetch=f
+key.add=a
+key.edit=e
+key.delete=d
+key.priority=p
+key.move_next_phase=m
+key.move_prev_phase=M
+key.open=o
+key.done=space
+key.nav_left=h
+key.nav_up=k
+key.nav_down=j
+key.nav_right=l
+
+# Colors (black, red, green, yellow, blue, magenta, cyan, white, default)
+color.title=cyan
+color.selected_border=red
+color.bracket=green
+color.ticket=cyan
+color.points=yellow
+color.tags=magenta
+color.text=white
+color.border=blue
+color.path=cyan
+
+# Compact card fields
+compact.show_tags=1
+compact.show_path=1

@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include "app_config.h"
 #include "tui_render.h"
 #include <ncurses.h>
 #include <stdio.h>
@@ -256,6 +257,7 @@ static void draw_compact_tags(const Task *task, int y, int x, int width,
 
 static int render_compact_card(const Task *task, int y, int x, int w,
                                int is_selected) {
+  const AppConfig *cfg = app_config_get();
   int h = 5;
   draw_box_with_title(y, x, h, w, "", is_selected ? 2 : 7);
 
@@ -268,9 +270,17 @@ static int render_compact_card(const Task *task, int y, int x, int w,
   int text_attrs = is_selected ? A_BOLD : 0;
   draw_ticket_point_name(task, y + 1, x + 1, w - 2, text_attrs);
 
-  draw_compact_tags(task, y + 2, x + 1, w - 2, is_selected);
-  print_trim(y + 3, x + 1, w - 2, task->path[0] != '\0' ? task->path : "-",
-             is_selected ? A_BOLD : A_DIM, 1);
+  if (cfg->compact.show_tags) {
+    draw_compact_tags(task, y + 2, x + 1, w - 2, is_selected);
+  } else {
+    print_trim(y + 2, x + 1, w - 2, "", 0, 5);
+  }
+  if (cfg->compact.show_path) {
+    print_trim(y + 3, x + 1, w - 2, task->path[0] != '\0' ? task->path : "-",
+               is_selected ? A_BOLD : A_DIM, 1);
+  } else {
+    print_trim(y + 3, x + 1, w - 2, "", 0, 5);
+  }
 
   return h;
 }
@@ -420,30 +430,33 @@ static void render_details(Task *selected, int top, int h) {
 }
 
 void init_tui_colors(void) {
+  const AppConfig *cfg = app_config_get();
   if (!has_colors()) {
     return;
   }
 
   start_color();
   use_default_colors();
-  init_pair(1, COLOR_CYAN, -1);
-  init_pair(2, COLOR_RED, -1);
-  init_pair(6, COLOR_GREEN, -1);
-  init_pair(8, COLOR_CYAN, -1);
-  init_pair(9, COLOR_YELLOW, -1);
-  init_pair(10, COLOR_MAGENTA, -1);
-  init_pair(5, COLOR_WHITE, -1);
-  init_pair(7, COLOR_BLUE, -1);
+  init_pair(1, cfg->colors.path, -1);
+  init_pair(2, cfg->colors.selected_border, -1);
+  init_pair(6, cfg->colors.bracket, -1);
+  init_pair(8, cfg->colors.ticket, -1);
+  init_pair(9, cfg->colors.points, -1);
+  init_pair(10, cfg->colors.tags, -1);
+  init_pair(11, cfg->colors.title, -1);
+  init_pair(5, cfg->colors.text, -1);
+  init_pair(7, cfg->colors.border, -1);
 }
 
 void display_tasks(Task *head, int selected_id, const char *search_query) {
+  const AppConfig *cfg = app_config_get();
   if (LINES < 24 || COLS < 90) {
     print_trim(1, 2, COLS - 4, "Terminal too small. Need at least 90x24.",
                A_BOLD, 2);
     return;
   }
 
-  print_trim(0, 2, 40, "KENZITUI COMPACT BOARD", A_BOLD, 1);
+  print_trim(0, 2, 40, "KENZITUI COMPACT BOARD", A_BOLD, 11);
   if (search_query != NULL && search_query[0] != '\0') {
     char filter[256];
     snprintf(filter, sizeof(filter), "Filter: %s", search_query);
@@ -474,7 +487,13 @@ void display_tasks(Task *head, int selected_id, const char *search_query) {
   Task *selected = find_task_by_id(head, selected_id);
   render_details(selected, detail_top, detail_h);
 
-  print_trim(LINES - 1, 2, COLS - 4,
-             "h/l phase  j/k up-down  SPACE done  f fetch  a add  e edit  d delete  p priority  m next-phase  M prev-phase  / search  c clear  o open  q quit",
-             A_DIM, 5);
+  char footer[256];
+  snprintf(footer, sizeof(footer),
+           "%c/%c phase  %c/%c up-down  SPACE done  %c fetch  %c add  %c edit  %c delete  %c priority  %c next-phase  %c prev-phase  %c search  %c clear  %c open  q quit",
+           cfg->keys.nav_left, cfg->keys.nav_right, cfg->keys.nav_down,
+           cfg->keys.nav_up, cfg->keys.fetch, cfg->keys.add, cfg->keys.edit,
+           cfg->keys.del, cfg->keys.priority, cfg->keys.move_next_phase,
+           cfg->keys.move_prev_phase, cfg->keys.search,
+           cfg->keys.clear_search, cfg->keys.open);
+  print_trim(LINES - 1, 2, COLS - 4, footer, A_DIM, 5);
 }

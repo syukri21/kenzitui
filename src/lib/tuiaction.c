@@ -1,6 +1,8 @@
 #define _GNU_SOURCE
+#include "app_config.h"
 #include "phab_fetch.h"
 #include "tuiaction.h"
+#include "kenzutls.h"
 #include <glob.h>
 #include <ncurses.h>
 #include <signal.h>
@@ -210,37 +212,6 @@ static int confirm_prompt(const char *prompt) {
   return (ch == 'y' || ch == 'Y');
 }
 
-static int shell_quote_single(const char *src, char *out, size_t out_size) {
-  if (src == NULL || out == NULL || out_size < 3) {
-    return 0;
-  }
-
-  size_t w = 0;
-  out[w++] = '\'';
-  for (size_t i = 0; src[i] != '\0'; i++) {
-    if (src[i] == '\'') {
-      if (w + 4 >= out_size) {
-        return 0;
-      }
-      out[w++] = '\'';
-      out[w++] = '\\';
-      out[w++] = '\'';
-      out[w++] = '\'';
-      continue;
-    }
-    if (w + 1 >= out_size) {
-      return 0;
-    }
-    out[w++] = src[i];
-  }
-  if (w + 1 >= out_size) {
-    return 0;
-  }
-  out[w++] = '\'';
-  out[w] = '\0';
-  return 1;
-}
-
 static void fetch_into_tui(TuiAction *action) {
   if (action == NULL || action->head == NULL || action->selected_id == NULL ||
       action->next_id == NULL) {
@@ -347,6 +318,56 @@ static void fetch_into_tui(TuiAction *action) {
   *action->selected_id = loaded->id;
   *action->next_id = (last_id > 0) ? (last_id + 1) : 1;
   show_status_message("Fetch success. Board updated.");
+}
+
+static int canonical_key(int ch) {
+  const AppConfig *cfg = app_config_get();
+  if (ch == cfg->keys.search) {
+    return SEARCH_KEY;
+  }
+  if (ch == cfg->keys.clear_search) {
+    return CLEAR_SEARCH_KEY;
+  }
+  if (ch == cfg->keys.fetch) {
+    return FETCH_KEY;
+  }
+  if (ch == cfg->keys.add) {
+    return ADD_KEY;
+  }
+  if (ch == cfg->keys.edit) {
+    return EDIT_KEY;
+  }
+  if (ch == cfg->keys.del) {
+    return DELETE_KEY;
+  }
+  if (ch == cfg->keys.priority) {
+    return PRIORITY_KEY;
+  }
+  if (ch == cfg->keys.move_next_phase) {
+    return MOVE_KEY;
+  }
+  if (ch == cfg->keys.move_prev_phase) {
+    return MOVE_BACK_KEY;
+  }
+  if (ch == cfg->keys.open) {
+    return OPEN_KEY;
+  }
+  if (ch == cfg->keys.done) {
+    return DONE_KEY;
+  }
+  if (ch == cfg->keys.nav_left) {
+    return NAV_LEFT_KEY;
+  }
+  if (ch == cfg->keys.nav_up) {
+    return NAV_UP_KEY;
+  }
+  if (ch == cfg->keys.nav_down) {
+    return NAV_DOWN_KEY;
+  }
+  if (ch == cfg->keys.nav_right) {
+    return NAV_RIGHT_KEY;
+  }
+  return ch;
 }
 
 static void extract_completion_name(const char *path, char *out, size_t out_len) {
@@ -541,7 +562,8 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
 }
 
 void execute(TuiAction *action) {
-  switch (action->ch) {
+  int key = canonical_key(action->ch);
+  switch (key) {
   case SEARCH_KEY:
     open_search(action);
     break;
