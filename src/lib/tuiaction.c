@@ -6,17 +6,63 @@
 #include <string.h>
 #include <unistd.h>
 
+static void extract_completion_name(const char *path, char *out, size_t out_len) {
+  size_t len = strlen(path);
+  int is_dir = 0;
+  while (len > 1 && path[len - 1] == '/') {
+    is_dir = 1;
+    len--;
+  }
+
+  size_t start = len;
+  while (start > 0 && path[start - 1] != '/') {
+    start--;
+  }
+
+  size_t name_len = len - start;
+  if (name_len >= out_len) {
+    name_len = out_len - 1;
+  }
+  memcpy(out, path + start, name_len);
+  out[name_len] = '\0';
+
+  if (is_dir && name_len + 1 < out_len) {
+    out[name_len] = '/';
+    out[name_len + 1] = '\0';
+  }
+}
+
 void tui_input(const char *prompt, char *buffer, int max_len) {
-  echo();
+  int pos = strlen(buffer);
+  int ch;
   curs_set(1);
+  noecho();
+  keypad(stdscr, TRUE);
+
+  while (1) {
+    mvprintw(LINES - 1, 0,
+             "                                                                 "
+             "               ");
+    mvprintw(LINES - 1, 2, "%s%s", prompt, buffer);
+    move(LINES - 1, 2 + strlen(prompt) + pos);
+    refresh();
+
+    ch = getch();
+    if (ch == '\n' || ch == '\r') {
+      break;
+    } else if (ch == KEY_BACKSPACE || ch == 127 || ch == '\b') {
+      if (pos > 0) {
+        buffer[--pos] = '\0';
+      }
+    } else if (ch >= 32 && ch <= 126 && pos < max_len - 1) {
+      buffer[pos++] = (char)ch;
+      buffer[pos] = '\0';
+    }
+  }
+
   mvprintw(LINES - 1, 0,
            "                                                                   "
-           "             "); // Clear line
-  mvprintw(LINES - 1, 2, "%s", prompt);
-  getnstr(buffer, max_len - 1);
-  mvprintw(LINES - 1, 0,
-           "                                                                   "
-           "             "); // Clear line
+           "             ");
   noecho();
   curs_set(0);
 }
@@ -63,24 +109,51 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
     } else if (ch == '\t') {
       glob_t g;
       char pattern[MAX_PATH + 2];
+      char dir_prefix[MAX_PATH] = "";
+      const char *current_token = buffer;
+      char *last_slash = strrchr(buffer, '/');
+      size_t dir_len = 0;
+
+      if (last_slash != NULL) {
+        dir_len = (size_t)(last_slash - buffer + 1);
+        if (dir_len >= sizeof(dir_prefix)) {
+          dir_len = sizeof(dir_prefix) - 1;
+        }
+        memcpy(dir_prefix, buffer, dir_len);
+        dir_prefix[dir_len] = '\0';
+        current_token = last_slash + 1;
+      }
+
       snprintf(pattern, sizeof(pattern), "%s*", buffer);
 
       if (glob(pattern, GLOB_TILDE | GLOB_MARK, NULL, &g) == 0) {
         if (g.gl_pathc > 0) {
-          // Find longest common prefix
-          size_t prefix_len = strlen(g.gl_pathv[0]);
+          char first_name[MAX_PATH];
+          extract_completion_name(g.gl_pathv[0], first_name, sizeof(first_name));
+
+          // Complete only the current segment after the last slash.
+          size_t prefix_len = strlen(first_name);
           for (size_t i = 1; i < g.gl_pathc; i++) {
+            char candidate_name[MAX_PATH];
+            extract_completion_name(g.gl_pathv[i], candidate_name,
+                                    sizeof(candidate_name));
             size_t j = 0;
-            while (j < prefix_len && g.gl_pathv[i][j] == g.gl_pathv[0][j]) {
+            while (j < prefix_len && candidate_name[j] == first_name[j]) {
               j++;
             }
             prefix_len = j;
           }
 
-          if (prefix_len < (size_t)max_len) {
-            strncpy(buffer, g.gl_pathv[0], prefix_len);
-            buffer[prefix_len] = '\0';
-            pos = prefix_len;
+          size_t min_prefix = strlen(current_token);
+          if (prefix_len < min_prefix) {
+            prefix_len = min_prefix;
+          }
+
+          if (dir_len + prefix_len < (size_t)max_len) {
+            memcpy(buffer, dir_prefix, dir_len);
+            strncpy(buffer + dir_len, first_name, prefix_len);
+            buffer[dir_len + prefix_len] = '\0';
+            pos = (int)(dir_len + prefix_len);
           }
 
           if (g.gl_pathc > 1) {
@@ -89,14 +162,12 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
                      "                       ");
             int x = 2;
             for (size_t i = 0; i < g.gl_pathc && i < 6; i++) {
-              char *name = strrchr(g.gl_pathv[i], '/');
-              if (name && *(name + 1) != '\0')
-                name++;
-              else
-                name = g.gl_pathv[i];
+              char display_name[MAX_PATH];
+              extract_completion_name(g.gl_pathv[i], display_name,
+                                      sizeof(display_name));
 
-              mvprintw(LINES - 2, x, "%s ", name);
-              x += strlen(name) + 2;
+              mvprintw(LINES - 2, x, "%s ", display_name);
+              x += strlen(display_name) + 2;
               if (x > COLS - 15)
                 break;
             }
@@ -196,9 +267,9 @@ void execute(TuiAction *action) {
   }
 
   case ADD_KEY: {
-    char title[MAX_TITLE];
-    char desc[MAX_DESC];
-    char project[MAX_PROJECT];
+    char title[MAX_TITLE] = "";
+    char desc[MAX_DESC] = "";
+    char project[MAX_PROJECT] = "";
     char path[MAX_PATH] = "";
     tui_input("Task Title: ", title, MAX_TITLE);
     tui_input("Task Description: ", desc, MAX_DESC);
