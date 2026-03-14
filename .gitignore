@@ -52,7 +52,7 @@ obj/
 # Editor/IDE files
 .vscode/
 .idea/
-.cache/clangd/
+.cache/
 *.swp
 *.swo
 *~
