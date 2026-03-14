@@ -48,6 +48,7 @@ Guidance for coding agents working in this repository.
   - `m` moves phase forward, `M` moves phase backward.
 - Keep phase header totals accurate: top-right `P:<sum>` should match points of visible tasks in each column.
 - Keep autosave behavior on mutating actions (add/edit/delete/done/priority/phase move).
+- Keep delete safety behavior: `d` must ask confirmation (`y/N`) before removal.
 - Keep fetch merge behavior stable:
   - update/add fetched Phabricator tasks
   - keep local non-Phabricator tasks untouched

@@ -59,4 +59,5 @@ Use `env.example` as template for `.env`.
 - `j/k`: move selection within the current phase column.
 - `m`: move selected task to next phase.
 - `M`: move selected task to previous phase.
+- `d`: delete requires confirmation (`y/N`).
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.

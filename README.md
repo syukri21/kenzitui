@@ -51,6 +51,9 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 | `o`       | Open Path in Neovim  |
 | `q`       | Quit and Save        |
 
+Delete behavior:
+- `d` requires confirmation (`y/N`) before the task is removed.
+
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites

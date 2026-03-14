@@ -195,6 +195,19 @@ static void show_status_message(const char *message) {
   refresh();
 }
 
+static int confirm_delete(void) {
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
+  mvprintw(LINES - 1, 2, "Delete task? (y/N): ");
+  refresh();
+  int ch = getch();
+  mvprintw(LINES - 1, 0,
+           "                                                                   "
+           "             ");
+  return (ch == 'y' || ch == 'Y');
+}
+
 static void fetch_into_tui(TuiAction *action) {
   if (action == NULL || action->head == NULL || action->selected_id == NULL ||
       action->next_id == NULL) {
@@ -471,6 +484,11 @@ void execute(TuiAction *action) {
     break;
 
   case DELETE_KEY: {
+    if (!confirm_delete()) {
+      show_status_message("Delete canceled.");
+      break;
+    }
+
     int old_id = *action->selected_id;
     Task *current = *action->head;
     Task *next_to_select = NULL;
