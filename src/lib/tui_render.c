@@ -291,11 +291,13 @@ static void render_board(Task *head, int selected_id, const char *search_query,
   ColumnBucket cols[3] = {{"Backlog", mem0, 0},
                           {"Doing", mem1, 0},
                           {"Need CR", mem2, 0}};
+  int col_points[3] = {0, 0, 0};
 
   for (int i = 0; i < visible_count; i++) {
     int c = phase_to_column(visible[i]->phase);
     if (cols[c].count < 256) {
       cols[c].items[cols[c].count++] = visible[i];
+      col_points[c] += visible[i]->points;
     }
   }
 
@@ -304,6 +306,13 @@ static void render_board(Task *head, int selected_id, const char *search_query,
     snprintf(title, sizeof(title), "%s (%d|%d)", cols[c].name, cols[c].count,
              total_visible);
     draw_box_with_title(top, col_x[c], col_h, col_w, title, 7);
+
+    char ptitle[32];
+    snprintf(ptitle, sizeof(ptitle), "P:%d", col_points[c]);
+    int px = col_x[c] + col_w - 2 - (int)strlen(ptitle);
+    if (px > col_x[c] + 2) {
+      print_trim(top, px, col_w - 3, ptitle, A_BOLD, 9);
+    }
 
     print_trim(top + 1, col_x[c] + 2, col_w - 4, "Not Assigned", A_DIM, 5);
     print_trim(top + 2, col_x[c] + 2, col_w - 4, "S syukri.khairi", 0, 1);

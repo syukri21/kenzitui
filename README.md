@@ -21,6 +21,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 - **Project Organization**: Group tasks by project names.
 - **Phabricator-Oriented Fields**: Track `phase`, `points`, `tags`, `ticket`, and `next sprint meeting`.
 - **Compact Board UI**: Border-first compact columns (`Backlog`, `Doing`, `Need CR`) with ticket + point visibility on each card.
+- **Phase Point Totals**: Each phase header shows total points (`P:<sum>`) at top-right.
 - **Board Navigation**: Vim-style board movement (`h/l` across phases, `j/k` within a phase column).
 - **Phase Move Hotkeys**: `m` moves selected task to next phase, `M` moves back to previous phase.
 - **Search**: Real-time filtering of tasks by title or project.

@@ -27,7 +27,7 @@ Loader is backward-compatible with legacy 7-field rows.
 - `src/main.c`: app entry; handles CLI mode (`fetch`) or starts ncurses UI.
 - `src/lib/task.c`: task CRUD + file load/save logic.
 - `src/lib/tuiaction.c`: key handling, board-aware movement (`h/j/k/l`), phase move (`m`/`M`), and autosave on task mutations.
-- `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`).
+- `src/lib/tui_render.c`: compact border-based board renderer (`Backlog`, `Doing`, `Need CR`) with per-column point totals in header (`P:<sum>`).
 - `src/lib/phab_fetch.c`: fetches and parses sprint workboard into `tasks.dat`.
 
 ## Fetch Flow (Phabricator)

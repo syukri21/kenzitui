@@ -46,6 +46,7 @@ Guidance for coding agents working in this repository.
   - `h/l` move across phase columns.
   - `j/k` move within current phase column.
   - `m` moves phase forward, `M` moves phase backward.
+- Keep phase header totals accurate: top-right `P:<sum>` should match points of visible tasks in each column.
 - Keep autosave behavior on mutating actions (add/edit/delete/done/priority/phase move).
 - Avoid storing raw credentials in tracked files.
 - Any change affecting keybindings, task file format, or TUI flows should update docs in `README.md` and/or `docs/USAGE.md`.
