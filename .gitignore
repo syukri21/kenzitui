@@ -66,3 +66,7 @@ compile_commands.json
 # Local env files
 .env
 *.bak
+
+# Local vendored dependency build artifacts
+third_party/ncurses/build/
+third_party/ncurses/local/

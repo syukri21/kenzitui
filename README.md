@@ -63,13 +63,18 @@ Open behavior (`o`):
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites
-Install `libncurses-dev` (on Ubuntu/Debian):
+No global ncurses install is required if you use local bootstrap:
 ```bash
-sudo apt install libncurses-dev
+make deps
 ```
+This builds ncurses into `third_party/ncurses/local` and `make` links against it.
+
+If your system already provides ncurses headers/libs, `make` can use system ncurses directly.
+On macOS, Makefile also detects Homebrew ncurses automatically (`brew install ncurses`).
 
 ### 🛠 Installation
-1.  **Build**: Run `make` to compile.
+1.  **(Optional) Bootstrap local ncurses**: `make deps`
+2.  **Build**: Run `make` to compile.
 2.  **Run**: Execute `./bin/kenzitui`.
 3.  **Clean**: Run `make clean` to remove build artifacts.
 

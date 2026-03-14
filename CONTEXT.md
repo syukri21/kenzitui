@@ -63,11 +63,16 @@ Owner username source order (for fetch filtering / board label):
 - Fetch merge behavior keeps user-local configuration fields on existing tasks (`path`, `is_done`, `priority`) and refreshes Phabricator fields (`name`, `description`, `project`, `phase`, `points`, `tags`, `ticket`, `next_sprint_meeting`).
 
 ## Development Commands
+- Bootstrap local ncurses (cross-platform friendly): `make deps`
 - Build: `make`
 - Run UI: `./bin/kenzitui`
 - Fetch sprint: `./bin/kenzitui fetch --id <sprint_id>`
 - Restore backup: `./bin/kenzitui restore --from tasks.dat.bak`
 - Logic test: `gcc -Wall -Wextra -Werror -Iinclude -std=c11 src/main_task_test.c src/lib/*.c -o bin/test_task -lncurses && ./bin/test_task`
+
+Build portability:
+- Supported targets: Linux and macOS (Darwin).
+- `make deps` bootstraps a local ncurses copy so global package install is optional.
 
 ## Current Interaction Model
 - `h/l`: move selection across phase columns.

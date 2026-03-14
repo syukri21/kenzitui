@@ -27,10 +27,12 @@ Guidance for coding agents working in this repository.
 - `obj/`: object files
 
 ## Build and Run
+- Bootstrap local ncurses (no global install): `make deps`
 - Build app: `make`
 - Run app: `./bin/kenzitui`
 - Clean artifacts: `make clean`
 - Fetch sprint tasks: `./bin/kenzitui fetch --id <sprint_id>`
+- Build should remain compatible on Linux and macOS (Darwin); keep Makefile ncurses detection paths working for both.
 
 ## Testing
 - Existing test entry: `make test`
