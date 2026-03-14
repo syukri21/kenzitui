@@ -277,6 +277,9 @@ static int render_compact_card(const Task *task, int y, int x, int w,
 
 static void render_board(Task *head, int selected_id, const char *search_query,
                          int top, int bottom) {
+  static int col_scroll[3] = {0, 0, 0};
+  const int card_h = 5;
+
   Task *visible[512];
   int total_visible = 0;
   int visible_count = collect_visible_tasks(head, search_query, visible, 512,
@@ -317,17 +320,71 @@ static void render_board(Task *head, int selected_id, const char *search_query,
     print_trim(top + 1, col_x[c] + 2, col_w - 4, "Not Assigned", A_DIM, 5);
     print_trim(top + 2, col_x[c] + 2, col_w - 4, "S syukri.khairi", 0, 1);
 
-    int y = top + 4;
+    int cards_top = top + 4;
+    int cards_bottom = top + col_h - 2;
+    int max_slots = (cards_bottom - cards_top + 1) / card_h;
+    if (max_slots < 1) {
+      max_slots = 1;
+    }
+
+    int max_scroll = cols[c].count - max_slots;
+    if (max_scroll < 0) {
+      max_scroll = 0;
+    }
+    if (col_scroll[c] > max_scroll) {
+      col_scroll[c] = max_scroll;
+    }
+    if (col_scroll[c] < 0) {
+      col_scroll[c] = 0;
+    }
+
+    int selected_row = -1;
     for (int i = 0; i < cols[c].count; i++) {
-      int h = 4;
-      if (y + h > top + col_h - 1) {
-        print_trim(top + col_h - 2, col_x[c] + 2, col_w - 4, "+more", A_DIM,
-                   5);
+      if (cols[c].items[i]->id == selected_id) {
+        selected_row = i;
         break;
       }
+    }
+    if (selected_row >= 0) {
+      if (selected_row < col_scroll[c]) {
+        col_scroll[c] = selected_row;
+      } else if (selected_row >= col_scroll[c] + max_slots) {
+        col_scroll[c] = selected_row - max_slots + 1;
+      }
+      if (col_scroll[c] > max_scroll) {
+        col_scroll[c] = max_scroll;
+      }
+    }
 
+    int start = col_scroll[c];
+    int end = start + max_slots;
+    if (end > cols[c].count) {
+      end = cols[c].count;
+    }
+
+    if (start > 0) {
+      char up_buf[16];
+      snprintf(up_buf, sizeof(up_buf), "↑%d", start);
+      int ux = col_x[c] + col_w - 2 - (int)strlen(up_buf);
+      if (ux > col_x[c] + 1) {
+        print_trim(top + 3, ux, col_w - 3, up_buf, A_DIM, 7);
+      }
+    }
+
+    int y = cards_top;
+    for (int i = start; i < end; i++) {
       y += render_compact_card(cols[c].items[i], y, col_x[c] + 1, col_w - 2,
                                cols[c].items[i]->id == selected_id);
+    }
+
+    int hidden_below = cols[c].count - end;
+    if (hidden_below > 0) {
+      char down_buf[16];
+      snprintf(down_buf, sizeof(down_buf), "%d↓", hidden_below);
+      int dx = col_x[c] + col_w - 2 - (int)strlen(down_buf);
+      if (dx > col_x[c] + 1) {
+        print_trim(top + col_h - 2, dx, col_w - 3, down_buf, A_DIM, 7);
+      }
     }
   }
 }

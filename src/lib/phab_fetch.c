@@ -974,3 +974,35 @@ int phab_extract_phase_and_points_for_test(const char *html, const char *phid,
   *out_points = points;
   return 1;
 }
+
+int phab_merge_tasks_from_html_for_test(const char *html, int sprint_id,
+                                        const char *output_path) {
+  if (html == NULL || output_path == NULL || sprint_id <= 0) {
+    return 0;
+  }
+
+  ImportedTask *items = NULL;
+  size_t count = 0;
+  if (!parse_tasks_from_html(html, &items, &count) || count == 0) {
+    free(items);
+    return 0;
+  }
+
+  int last_id = 0;
+  Task *head = load_tasks_from_file(output_path, &last_id);
+  (void)last_id;
+  size_t updated = 0;
+  size_t added = 0;
+  int ok =
+      merge_imported_tasks_into_existing(items, count, sprint_id, &head, &updated,
+                                         &added);
+  free(items);
+  if (!ok) {
+    free_all_tasks(head);
+    return 0;
+  }
+
+  save_tasks_to_file(head, output_path);
+  free_all_tasks(head);
+  return 1;
+}

@@ -41,6 +41,7 @@ Cookie source order:
 3. `.env` (`KENZITUI_PHAB_COOKIE=` or `PHAB_COOKIE=`)
 
 Use `env.example` as template for `.env`.
+Keep real cookies local and rotate them when expired or exposed.
 
 ## Known-Critical Parsing Behaviors
 - CSV loader preserves empty fields (`...,,...`) so column order remains stable.

@@ -3,9 +3,11 @@
 #include "tuiaction.h"
 #include <glob.h>
 #include <ncurses.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define MAX_NAV_TASKS 512
@@ -227,9 +229,58 @@ static void fetch_into_tui(TuiAction *action) {
           ? action->task_file
           : "tasks.dat";
 
-  show_status_message("Fetching sprint data...");
-  int rc = fetch_sprint_tasks_to_file(sprint_id, task_file, ".env");
-  if (rc != 0) {
+  pid_t pid = fork();
+  if (pid < 0) {
+    show_status_message("Failed to start fetch process.");
+    return;
+  }
+
+  if (pid == 0) {
+    FILE *sink = fopen("/tmp/kenzitui_fetch.log", "a");
+    if (sink != NULL) {
+      dup2(fileno(sink), STDOUT_FILENO);
+      dup2(fileno(sink), STDERR_FILENO);
+      fclose(sink);
+    }
+    int rc = fetch_sprint_tasks_to_file(sprint_id, task_file, ".env");
+    _exit(rc == 0 ? 0 : 1);
+  }
+
+  nodelay(stdscr, TRUE);
+  const char spinner[] = "|/-\\";
+  int spin_idx = 0;
+  int canceled = 0;
+  int status = 0;
+  for (;;) {
+    int done = waitpid(pid, &status, WNOHANG);
+    if (done == pid) {
+      break;
+    }
+
+    char msg[128];
+    snprintf(msg, sizeof(msg),
+             "Fetching sprint %d... %c  (press ESC to cancel)", sprint_id,
+             spinner[spin_idx % 4]);
+    show_status_message(msg);
+    spin_idx++;
+
+    int ch = getch();
+    if (ch == 27) {
+      canceled = 1;
+      kill(pid, SIGTERM);
+      waitpid(pid, &status, 0);
+      break;
+    }
+    napms(100);
+  }
+  nodelay(stdscr, FALSE);
+
+  if (canceled) {
+    show_status_message("Fetch canceled.");
+    return;
+  }
+
+  if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     show_status_message("Fetch failed. Check cookie in .env.");
     return;
   }

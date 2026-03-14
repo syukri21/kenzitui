@@ -86,6 +86,11 @@ cp env.example .env
 # then fill PHAB_COOKIE in .env
 ```
 
+Security notes for `.env`:
+- Never commit real cookies (`PHAB_COOKIE` / `KENZITUI_PHAB_COOKIE`) to git.
+- Keep `.env` local only and rotate cookie immediately if it was exposed.
+- If fetch starts failing with auth errors, refresh cookie from browser, update `.env`, and retry.
+
 ## 💾 Task Data Format
 `tasks.dat` rows use:
 `id,name,description,project,path,is_done,priority,phase,points,tags,ticket,next_sprint_meeting`

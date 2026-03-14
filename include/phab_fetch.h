@@ -11,4 +11,7 @@ int phab_extract_phase_and_points_for_test(const char *html, const char *phid,
                                            size_t out_phase_size,
                                            int *out_points);
 
+int phab_merge_tasks_from_html_for_test(const char *html, int sprint_id,
+                                        const char *output_path);
+
 #endif

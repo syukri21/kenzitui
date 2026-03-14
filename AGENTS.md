@@ -64,6 +64,7 @@ Guidance for coding agents working in this repository.
   2. `PHAB_COOKIE` env var
   3. `.env` (`KENZITUI_PHAB_COOKIE=` or `PHAB_COOKIE=`)
 - `env.example` is the template. `.env` should remain local/untracked.
+- If cookie expires/fetch fails, refresh cookie from browser and rotate `.env` value.
 
 ## Agent Workflow
 1. Inspect related headers and implementation files before editing.
