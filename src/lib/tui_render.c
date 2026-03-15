@@ -127,7 +127,11 @@ static void draw_box_with_title(int y, int x, int h, int w, const char *title,
     return;
   }
 
-  attron(COLOR_PAIR(color));
+  int attrs = COLOR_PAIR(color);
+  if (color == 2) {
+    attrs |= A_BOLD;
+  }
+  attron(attrs);
   mvhline(y, x + 1, ACS_HLINE, w - 2);
   mvhline(y + h - 1, x + 1, ACS_HLINE, w - 2);
   mvvline(y + 1, x, ACS_VLINE, h - 2);
@@ -136,7 +140,7 @@ static void draw_box_with_title(int y, int x, int h, int w, const char *title,
   mvaddch(y, x + w - 1, ACS_URCORNER);
   mvaddch(y + h - 1, x, ACS_LLCORNER);
   mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
-  attroff(COLOR_PAIR(color));
+  attroff(attrs);
 
   if (title != NULL && title[0] != '\0') {
     print_trim(y, x + 2, w - 4, title, A_BOLD, color);
