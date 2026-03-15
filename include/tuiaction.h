@@ -20,6 +20,7 @@
 #define OPEN_KEY 'o'
 #define OPEN_CONTEXT_KEY 'O'
 #define GENERATE_CONTEXT_KEY '0'
+#define HELP_KEY '?'
 #define DONE_KEY ' '
 #define NAV_LEFT_KEY 'h'
 #define NAV_UP_KEY 'k'

@@ -14,6 +14,7 @@ typedef struct AppKeyConfig {
   int open;
   int open_context;
   int generate_context;
+  int help;
   int done;
   int nav_left;
   int nav_up;

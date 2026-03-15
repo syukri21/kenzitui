@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include "app_config.h"
 #include "tuiaction.h"
 #include <glob.h>
 #include <ncurses.h>
@@ -150,7 +151,8 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
       if (glob(pattern, GLOB_TILDE | GLOB_MARK, NULL, &g) == 0) {
         if (g.gl_pathc > 0) {
           char first_name[MAX_PATH];
-          extract_completion_name(g.gl_pathv[0], first_name, sizeof(first_name));
+          extract_completion_name(g.gl_pathv[0], first_name,
+                                  sizeof(first_name));
 
           size_t prefix_len = strlen(first_name);
           for (size_t i = 1; i < g.gl_pathc; i++) {
@@ -198,4 +200,63 @@ void open_search(TuiAction *action) {
     return;
   }
   tui_input("Search (Title/Project): ", action->state->search_query, MAX_TITLE);
+}
+
+void tui_show_keybindings_help(void) {
+  const AppConfig *cfg = app_config_get();
+  clear();
+
+  int w = 68;
+  int h = 17;
+  int y = (LINES - h) / 2;
+  int x = (COLS - w) / 2;
+  if (y < 0) {
+    y = 0;
+  }
+  if (x < 0) {
+    x = 0;
+  }
+  if (w > COLS) {
+    w = COLS;
+  }
+  if (h > LINES) {
+    h = LINES;
+  }
+  if (w < 10 || h < 6) {
+    mvprintw(0, 0, "Terminal too small for help. Press any key.");
+    refresh();
+    (void)getch();
+    return;
+  }
+
+  attron(COLOR_PAIR(4));
+  mvhline(y, x + 1, ACS_HLINE, w - 2);
+  mvhline(y + h - 1, x + 1, ACS_HLINE, w - 2);
+  mvvline(y + 1, x, ACS_VLINE, h - 2);
+  mvvline(y + 1, x + w - 1, ACS_VLINE, h - 2);
+  mvaddch(y, x, ACS_ULCORNER);
+  mvaddch(y, x + w - 1, ACS_URCORNER);
+  mvaddch(y + h - 1, x, ACS_LLCORNER);
+  mvaddch(y + h - 1, x + w - 1, ACS_LRCORNER);
+  attroff(COLOR_PAIR(4));
+
+  mvprintw(y + 1, x + 2, "KEYBINDINGS");
+  mvprintw(y + 3, x + 2, "%c/%c move phase   %c/%c move task",
+           cfg->keys.nav_left, cfg->keys.nav_right, cfg->keys.nav_down,
+           cfg->keys.nav_up);
+  mvprintw(y + 4, x + 2, "SPACE done         %c fetch          %c search",
+           cfg->keys.fetch, cfg->keys.search);
+  mvprintw(y + 5, x + 2, "%c add             %c edit           %c delete",
+           cfg->keys.add, cfg->keys.edit, cfg->keys.del);
+  mvprintw(y + 6, x + 2, "%c priority        %c next-phase     %c prev-phase",
+           cfg->keys.priority, cfg->keys.move_next_phase,
+           cfg->keys.move_prev_phase);
+  mvprintw(y + 7, x + 2, "%c open project    %c open/gen context",
+           cfg->keys.open, cfg->keys.generate_context);
+  mvprintw(y + 8, x + 2, "%c clear search    q quit/save",
+           cfg->keys.clear_search);
+
+  mvprintw(y + h - 2, x + 2, "Press any key to close");
+  refresh();
+  (void)getch();
 }

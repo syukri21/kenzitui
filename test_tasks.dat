@@ -1,3 +1,3 @@
-1,Task 1,Desc 1,Proj 1,.,0,2,Doing,5,sprint-goal|backend,T1,2026-03-27
-2,Task 2,Desc 2,Proj 2,/tmp,0,1,Backlog,3,,T2,
-3,"Task, ""Quoted""","Desc, with ""quotes""","Proj,3","/tmp/a,b",0,0,Need CR,8,"tag-one|tag,with,comma","T""3,EX",2026-04-01
+1,Task 1,Desc 1,Proj 1,.,,0,2,Doing,5,sprint-goal|backend,T1,2026-03-27
+2,Task 2,Desc 2,Proj 2,/tmp,,0,1,Backlog,3,,T2,
+3,"Task, ""Quoted""","Desc, with ""quotes""","Proj,3","/tmp/a,b","/tmp/ctx,""quoted"",3.md",0,0,Need CR,8,"tag-one|tag,with,comma","T""3,EX",2026-04-01

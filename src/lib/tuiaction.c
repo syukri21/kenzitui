@@ -30,6 +30,8 @@ static int canonical_key(int ch) {
     return OPEN_CONTEXT_KEY;
   if (ch == cfg->keys.generate_context)
     return GENERATE_CONTEXT_KEY;
+  if (ch == cfg->keys.help)
+    return HELP_KEY;
   if (ch == cfg->keys.done)
     return DONE_KEY;
   if (ch == cfg->keys.nav_left)
@@ -103,6 +105,9 @@ void execute(TuiAction *action) {
     break;
   case GENERATE_CONTEXT_KEY:
     tui_action_generate_context_path(action);
+    break;
+  case HELP_KEY:
+    tui_show_keybindings_help();
     break;
   default:
     break;

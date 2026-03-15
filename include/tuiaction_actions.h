@@ -5,6 +5,7 @@
 
 void tui_show_status_message(const char *message);
 int tui_confirm_prompt(const char *prompt);
+void tui_show_keybindings_help(void);
 
 void tui_action_handle_fetch(TuiAction *action);
 void tui_action_nav_vertical(TuiAction *action, int delta_row);
