@@ -60,22 +60,6 @@ static int phase_to_column(const char *phase) {
   return 0;
 }
 
-static const char *display_owner_name(void) {
-  const char *owner = getenv("KENZITUI_PHAB_USER");
-  if (owner != NULL && owner[0] != '\0') {
-    return owner;
-  }
-  owner = getenv("PHAB_USER");
-  if (owner != NULL && owner[0] != '\0') {
-    return owner;
-  }
-  owner = getenv("USER");
-  if (owner != NULL && owner[0] != '\0') {
-    return owner;
-  }
-  return "owner";
-}
-
 static void accumulate_phase_summary(const Task *task, PhaseSummary *summary) {
   if (task == NULL || summary == NULL) {
     return;
@@ -358,12 +342,7 @@ static void render_board(Task *head, int selected_id, const char *search_query,
       print_trim(top, px, col_w - 3, ptitle, A_BOLD, 9);
     }
 
-    print_trim(top + 1, col_x[c] + 2, col_w - 4, "Not Assigned", A_DIM, 5);
-    char owner_line[96];
-    snprintf(owner_line, sizeof(owner_line), "S %s", display_owner_name());
-    print_trim(top + 2, col_x[c] + 2, col_w - 4, owner_line, 0, 1);
-
-    int cards_top = top + 4;
+    int cards_top = top + 2;
     int cards_bottom = top + col_h - 2;
     int max_slots = (cards_bottom - cards_top + 1) / card_h;
     if (max_slots < 1) {
