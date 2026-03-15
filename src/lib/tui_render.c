@@ -433,26 +433,29 @@ static void render_details(Task *selected, int top, int h) {
                COLS - 6, pbuf, A_BOLD, 9);
 
   char line2[512];
+  snprintf(line2, sizeof(line2), "Name:%s", selected->name);
+  print_trim(top + 2, 3, COLS - 6, line2, A_BOLD, 5);
+
   snprintf(line2, sizeof(line2), "Project:%s  Next:%s", selected->project,
            selected->next_sprint_meeting[0] != '\0' ? selected->next_sprint_meeting
                                                     : "-");
-  print_trim(top + 2, 3, COLS - 6, line2, 0, 5);
+  print_trim(top + 3, 3, COLS - 6, line2, 0, 5);
 
   char line3[512];
   snprintf(line3, sizeof(line3), "Tags:%s", selected->tags[0] != '\0' ? selected->tags : "-");
-  print_trim(top + 3, 3, COLS - 6, line3, 0, 5);
+  print_trim(top + 4, 3, COLS - 6, line3, 0, 5);
 
   char line4[512];
   snprintf(line4, sizeof(line4), "Path:%s",
            selected->path[0] != '\0' ? selected->path : "-");
-  print_trim(top + 4, 3, COLS - 6, line4, 0, 5);
+  print_trim(top + 5, 3, COLS - 6, line4, 0, 5);
 
   char line5[512];
   snprintf(line5, sizeof(line5), "Context:%s",
            selected->context_path[0] != '\0' ? selected->context_path : "-");
-  print_trim(top + 5, 3, COLS - 6, line5, 0, 5);
+  print_trim(top + 6, 3, COLS - 6, line5, 0, 5);
 
-  print_trim(top + 6, 3, COLS - 6, selected->description, 0, 5);
+  print_trim(top + 7, 3, COLS - 6, selected->description, 0, 5);
 }
 
 void init_tui_colors(void) {
