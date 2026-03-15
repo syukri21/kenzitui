@@ -13,6 +13,7 @@
 #define FETCH_KEY 'f'
 #define ADD_KEY 'a'
 #define EDIT_KEY 'e'
+#define EDIT_PATH_KEY 'P'
 #define DELETE_KEY 'd'
 #define PRIORITY_KEY 'p'
 #define MOVE_KEY 'm'

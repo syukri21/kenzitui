@@ -43,6 +43,7 @@ Kenzitui is a terminal-based project and task management tool built with C and n
 | `SPACE`   | Toggle Task Done     |
 | `a`       | Add New Task         |
 | `e`       | Edit Selected Task   |
+| `P`       | Edit Project Path    |
 | `d`       | Delete Selected Task |
 | `p`       | Toggle Priority      |
 | `m`       | Move To Next Phase   |
@@ -62,6 +63,15 @@ Open behavior (`o`):
 - Expands `~` / `~/...` task paths to `$HOME` before opening.
 - Opens Neovim with the task path as working directory.
 - In tmux, switches to an existing pane if that same path is already open; otherwise creates a new window.
+
+Path edit behavior (`P`):
+- Edits only project path (`path`) of selected task.
+- Uses the same TAB path-autocomplete input as add/edit.
+
+Path autocomplete behavior:
+- `TAB` completes path by common prefix.
+- If common prefix cannot advance, it falls back to first match.
+- Shows candidate options on the status line (`Suggestions: ...`).
 
 Open context behavior (`O`):
 - Opens `context_path` as a file in Neovim.
@@ -168,7 +178,8 @@ Context auto-generation:
 - Bracket prefix folder example:
   - `[Ledger Service] Create Credit API` -> `LedgerService/T148272_Create_Credit_API.md`
 - New context note content:
-  - If file is missing/empty, content is initialized from `ContextTemplate.md` with placeholder replacement from selected task (ticket, phase/status, priority, points, tags, date, title/service).
+  - If file is missing/empty, content is initialized from `ContextTemplate.md` with placeholder replacement from selected task (ticket, phase/status, priority, points, tags, date, title/service, workdir).
+  - `workdir`/`projectPath` placeholder uses selected task `path`; if missing, it falls back to generated context file directory.
 
 ## 📌 Fetch Notes
 - Sprint fetch maps tasks by assigned owner and preserves phase placement (e.g. `Doing` vs `Backlog`).

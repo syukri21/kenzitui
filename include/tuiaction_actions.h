@@ -14,6 +14,7 @@ void tui_action_toggle_done(TuiAction *action);
 void tui_action_delete(TuiAction *action);
 void tui_action_add(TuiAction *action);
 void tui_action_edit(TuiAction *action);
+void tui_action_edit_project_path(TuiAction *action);
 void tui_action_cycle_priority(TuiAction *action);
 void tui_action_move_phase_next(TuiAction *action);
 void tui_action_move_phase_prev(TuiAction *action);

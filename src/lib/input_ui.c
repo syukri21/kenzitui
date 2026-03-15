@@ -132,6 +132,7 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
       glob_t g;
       char pattern[MAX_PATH + 2];
       char dir_prefix[MAX_PATH] = "";
+      char suggest[1024];
       const char *current_token = buffer;
       char *last_slash = strrchr(buffer, '/');
       size_t dir_len = 0;
@@ -149,6 +150,7 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
       snprintf(pattern, sizeof(pattern), "%s*", buffer);
 
       if (glob(pattern, GLOB_TILDE | GLOB_MARK, NULL, &g) == 0) {
+        suggest[0] = '\0';
         if (g.gl_pathc > 0) {
           char first_name[MAX_PATH];
           extract_completion_name(g.gl_pathv[0], first_name,
@@ -170,6 +172,10 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
           if (prefix_len < min_prefix) {
             prefix_len = min_prefix;
           }
+          // If common-prefix cannot advance, use first match so TAB still helps.
+          if (prefix_len == min_prefix && g.gl_pathc > 0) {
+            prefix_len = strlen(first_name);
+          }
 
           if (dir_len + prefix_len < (size_t)max_len) {
             memcpy(buffer, dir_prefix, dir_len);
@@ -177,8 +183,39 @@ void tui_get_path_input(const char *prompt, char *buffer, int max_len) {
             buffer[dir_len + prefix_len] = '\0';
             pos = (int)(dir_len + prefix_len);
           }
+
+          // Show candidate options on status line (compact single-line view).
+          snprintf(suggest, sizeof(suggest), "Suggestions:");
+          for (size_t i = 0; i < g.gl_pathc; i++) {
+            char name[MAX_PATH];
+            extract_completion_name(g.gl_pathv[i], name, sizeof(name));
+            if (name[0] == '\0') {
+              continue;
+            }
+            size_t used = strlen(suggest);
+            size_t add = strlen(name) + 1;
+            if (used + add + 4 >= sizeof(suggest)) {
+              strncat(suggest, " ...", sizeof(suggest) - strlen(suggest) - 1);
+              break;
+            }
+            strncat(suggest, " ", sizeof(suggest) - strlen(suggest) - 1);
+            strncat(suggest, name, sizeof(suggest) - strlen(suggest) - 1);
+          }
+        } else {
+          snprintf(suggest, sizeof(suggest), "No path match");
         }
+        mvprintw(LINES - 2, 0,
+                 "                                                                   "
+                 "             ");
+        mvprintw(LINES - 2, 2, "%s", suggest);
+        refresh();
         globfree(&g);
+      } else {
+        mvprintw(LINES - 2, 0,
+                 "                                                                   "
+                 "             ");
+        mvprintw(LINES - 2, 2, "No path match");
+        refresh();
       }
     } else if (ch >= 32 && ch <= 126 && pos < max_len - 1) {
       buffer[pos++] = (char)ch;
@@ -246,13 +283,14 @@ void tui_show_keybindings_help(void) {
            cfg->keys.nav_up);
   mvprintw(y + 4, x + 2, "SPACE done         %c fetch          %c search",
            cfg->keys.fetch, cfg->keys.search);
-  mvprintw(y + 5, x + 2, "%c add             %c edit           %c delete",
-           cfg->keys.add, cfg->keys.edit, cfg->keys.del);
-  mvprintw(y + 6, x + 2, "%c priority        %c next-phase     %c prev-phase",
-           cfg->keys.priority, cfg->keys.move_next_phase,
-           cfg->keys.move_prev_phase);
-  mvprintw(y + 7, x + 2, "%c open project    %c open/gen context",
-           cfg->keys.open, cfg->keys.generate_context);
+  mvprintw(y + 5, x + 2,
+           "%c add             %c edit           %c edit-path",
+           cfg->keys.add, cfg->keys.edit, cfg->keys.edit_path);
+  mvprintw(y + 6, x + 2, "%c delete          %c priority       %c next-phase",
+           cfg->keys.del, cfg->keys.priority, cfg->keys.move_next_phase);
+  mvprintw(y + 7, x + 2, "%c prev-phase      %c open project   %c open/gen context",
+           cfg->keys.move_prev_phase, cfg->keys.open,
+           cfg->keys.generate_context);
   mvprintw(y + 8, x + 2, "%c clear search    q quit/save",
            cfg->keys.clear_search);
 

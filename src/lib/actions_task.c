@@ -416,7 +416,8 @@ static void tags_pipe_to_csv(const char *tags, char *out, size_t out_size) {
   out[w] = '\0';
 }
 
-static int write_context_template_file(const Task *task, const char *file_path) {
+static int write_context_template_file(const Task *task, const char *file_path,
+                                       const char *fallback_workdir) {
   if (task == NULL || file_path == NULL || file_path[0] == '\0') {
     return 0;
   }
@@ -451,10 +452,20 @@ static int write_context_template_file(const Task *task, const char *file_path) 
   char points[16];
   char date[16];
   char tags_csv[256];
+  char workdir[MAX_PATH];
   extract_service_and_title(task->name, service, sizeof(service), title,
                             sizeof(title));
   snprintf(points, sizeof(points), "%d", task->points);
   tags_pipe_to_csv(task->tags, tags_csv, sizeof(tags_csv));
+  if (task->path[0] != '\0' && !is_missing_context_path(task->path) &&
+      resolve_open_path(task->path, workdir, sizeof(workdir))) {
+    // Use selected card project path as preferred workdir.
+  } else {
+    snprintf(workdir, sizeof(workdir), "%s",
+             fallback_workdir != NULL && fallback_workdir[0] != '\0'
+                 ? fallback_workdir
+                 : ".");
+  }
 
   time_t now = time(NULL);
   struct tm tm_now;
@@ -481,7 +492,15 @@ static int write_context_template_file(const Task *task, const char *file_path) 
       !replace_all(template_buf, sizeof(template_buf), "{ { tags } }",
                    tags_csv) ||
       !replace_all(template_buf, sizeof(template_buf), "{{ticket}}",
-                   task->ticket)) {
+                   task->ticket) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{projectPath}}",
+                   workdir) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { projectPath } }",
+                   workdir) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{workdir}}",
+                   workdir) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { workdir } }",
+                   workdir)) {
     return 0;
   }
 
@@ -519,7 +538,7 @@ static int ensure_context_file_seeded(const Task *task, const char *raw_path) {
     return 0;
   }
 
-  return write_context_template_file(task, resolved_file);
+  return write_context_template_file(task, resolved_file, parent);
 }
 
 static void open_context_file_target(const Task *current, const char *raw_path,
@@ -780,6 +799,19 @@ void tui_action_edit(TuiAction *action) {
             MAX_NEXT_MEETING);
   current->priority = tui_get_priority_input();
   task_auto_fill_context_path(current);
+  persist(action->state);
+}
+
+void tui_action_edit_project_path(TuiAction *action) {
+  if (action == NULL || action->state == NULL) {
+    return;
+  }
+  Task *current = find_selected(action->state);
+  if (current == NULL) {
+    return;
+  }
+
+  tui_get_path_input("New Project Path: ", current->path, MAX_PATH);
   persist(action->state);
 }
 

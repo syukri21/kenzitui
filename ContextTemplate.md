@@ -12,6 +12,7 @@ team:
 skip_test: false
 subscribers: []
 referenced_files: []
+workdir: { { projectPath } }
 ---
 
 # ✅ Task Checklist

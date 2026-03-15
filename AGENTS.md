@@ -72,6 +72,8 @@ Guidance for coding agents working in this repository.
   - expand `~` task path to `$HOME`
   - open nvim with task path as working directory
   - in tmux, reuse existing pane for same path instead of opening duplicate windows
+  - key `P` edits only selected task project path (`path`)
+  - project path input TAB should keep showing suggestion options on status line
 - Keep open-context behavior stable:
   - key `O` opens `context_path` as file in nvim
   - if `context_path` empty/`-`, show status message
@@ -104,6 +106,7 @@ Guidance for coding agents working in this repository.
 ## Context Template
 - Template file for generated notes is `ContextTemplate.md` at repo root.
 - Keep placeholder replacement behavior working for task-driven values (service/title/status/priority/points/tags/date/ticket).
+- Keep `workdir`/`projectPath` placeholders populated from selected task `path`, with fallback to context file parent directory.
 
 ## Agent Workflow
 1. Inspect related headers and implementation files before editing.

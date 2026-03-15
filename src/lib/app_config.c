@@ -92,6 +92,7 @@ void app_config_set_defaults(void) {
   g_cfg.keys.fetch = 'f';
   g_cfg.keys.add = 'a';
   g_cfg.keys.edit = 'e';
+  g_cfg.keys.edit_path = 'P';
   g_cfg.keys.del = 'd';
   g_cfg.keys.priority = 'p';
   g_cfg.keys.move_next_phase = 'm';
@@ -158,6 +159,8 @@ void app_config_load(const char *path) {
       g_cfg.keys.add = parse_key(value, g_cfg.keys.add);
     } else if (strcmp(key, "key.edit") == 0) {
       g_cfg.keys.edit = parse_key(value, g_cfg.keys.edit);
+    } else if (strcmp(key, "key.edit_path") == 0) {
+      g_cfg.keys.edit_path = parse_key(value, g_cfg.keys.edit_path);
     } else if (strcmp(key, "key.delete") == 0) {
       g_cfg.keys.del = parse_key(value, g_cfg.keys.del);
     } else if (strcmp(key, "key.priority") == 0) {

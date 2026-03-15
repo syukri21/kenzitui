@@ -83,9 +83,11 @@ Build portability:
 - `d`: delete requires confirmation (`y/N`).
 - `f`: shows fetch preview (`fetched/updated/added/kept`) and asks confirmation before apply.
 - `o`: expands `~` path to `$HOME` and opens Neovim at task path as working directory.
+- `P`: edits selected task `path` only (project path quick edit).
 - `O`: opens task `context_path` as a file in Neovim.
 - `0`: if `context_path` is empty/`-`, generate then persist and open note file; if already set, open directly.
 - `0` also seeds new/empty note file from `ContextTemplate.md` before opening.
+- Path input TAB autocomplete shows candidate suggestions on status line.
 - In tmux, `o` reuses an existing pane if the same path is already open; otherwise it creates a new tmux window.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.
@@ -98,6 +100,7 @@ Context root source order for generation (`0`):
 Context note template behavior:
 - Template file path: project root `ContextTemplate.md`.
 - On `0`, if target context file is empty/new, template placeholders are replaced from selected task data.
+- `workdir`/`projectPath` template placeholder uses selected task `path`; fallback is context file parent directory.
 
 ## Runtime State Model
 - `AppState` is the single source of truth for interactive mode:

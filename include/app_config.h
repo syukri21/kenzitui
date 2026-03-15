@@ -7,6 +7,7 @@ typedef struct AppKeyConfig {
   int fetch;
   int add;
   int edit;
+  int edit_path;
   int del;
   int priority;
   int move_next_phase;

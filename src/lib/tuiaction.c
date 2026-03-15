@@ -16,6 +16,8 @@ static int canonical_key(int ch) {
     return ADD_KEY;
   if (ch == cfg->keys.edit)
     return EDIT_KEY;
+  if (ch == cfg->keys.edit_path)
+    return EDIT_PATH_KEY;
   if (ch == cfg->keys.del)
     return DELETE_KEY;
   if (ch == cfg->keys.priority)
@@ -87,6 +89,9 @@ void execute(TuiAction *action) {
     break;
   case EDIT_KEY:
     tui_action_edit(action);
+    break;
+  case EDIT_PATH_KEY:
+    tui_action_edit_project_path(action);
     break;
   case PRIORITY_KEY:
     tui_action_cycle_priority(action);
