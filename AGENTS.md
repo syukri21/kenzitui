@@ -75,7 +75,7 @@ Guidance for coding agents working in this repository.
 - Keep open-context behavior stable:
   - key `O` opens `context_path` as file in nvim
   - if `context_path` empty/`-`, show status message
-  - key `0` generates `context_path` when empty/`-`, persists it, then opens file; if already set, open directly
+  - key `0` generates `context_path` when empty/`-`, persists it, seeds new/empty note from `ContextTemplate.md`, then opens file; if already set, open directly
 - Keep backup behavior intact: saving tasks should refresh `tasks.dat.bak`.
 - Keep restore command working (`restore --from <backup>` copies backup to `tasks.dat`).
 - Avoid storing raw credentials in tracked files.
@@ -100,6 +100,10 @@ Guidance for coding agents working in this repository.
   1. `OBSIDIAN_PATH`
   2. `KENZITUI_OBSIDIAN_PATH`
   3. `.env` (`OBSIDIAN_PATH=` or `KENZITUI_OBSIDIAN_PATH=`)
+
+## Context Template
+- Template file for generated notes is `ContextTemplate.md` at repo root.
+- Keep placeholder replacement behavior working for task-driven values (service/title/status/priority/points/tags/date/ticket).
 
 ## Agent Workflow
 1. Inspect related headers and implementation files before editing.

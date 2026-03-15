@@ -69,7 +69,7 @@ Open context behavior (`O`):
 
 Generate/open context behavior (`0`):
 - If `context_path` is empty or `-`, Kenzitui generates it and saves immediately.
-- Then it creates missing parent folders/file and opens the note in Neovim.
+- Then it creates missing parent folders/file, seeds content from `ContextTemplate.md`, and opens the note in Neovim.
 - If `context_path` already exists, it opens directly.
 
 ## 🚀 Getting Started
@@ -167,6 +167,8 @@ Context auto-generation:
   - `<OBSIDIAN_PATH>/<Subfolder>/<ticket>_<task_name_slug>.md`
 - Bracket prefix folder example:
   - `[Ledger Service] Create Credit API` -> `LedgerService/T148272_Create_Credit_API.md`
+- New context note content:
+  - If file is missing/empty, content is initialized from `ContextTemplate.md` with placeholder replacement from selected task (ticket, phase/status, priority, points, tags, date, title/service).
 
 ## 📌 Fetch Notes
 - Sprint fetch maps tasks by assigned owner and preserves phase placement (e.g. `Doing` vs `Backlog`).

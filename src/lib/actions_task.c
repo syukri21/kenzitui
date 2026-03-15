@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 static void persist(AppState *state) {
@@ -286,6 +287,239 @@ static int split_parent_and_name(const char *full_path, char *parent,
     return 0;
   }
   return 1;
+}
+
+static int read_file_to_buffer(const char *path, char *out, size_t out_size) {
+  if (path == NULL || out == NULL || out_size == 0) {
+    return 0;
+  }
+  out[0] = '\0';
+
+  FILE *f = fopen(path, "r");
+  if (f == NULL) {
+    return 0;
+  }
+
+  size_t n = fread(out, 1, out_size - 1, f);
+  out[n] = '\0';
+  fclose(f);
+  return 1;
+}
+
+static int replace_all(char *buf, size_t buf_size, const char *needle,
+                       const char *replacement) {
+  if (buf == NULL || needle == NULL || replacement == NULL || needle[0] == '\0' ||
+      buf_size == 0) {
+    return 0;
+  }
+
+  char temp[16384];
+  size_t w = 0;
+  size_t nlen = strlen(needle);
+  size_t rlen = strlen(replacement);
+  const char *p = buf;
+
+  while (*p != '\0') {
+    if (strncmp(p, needle, nlen) == 0) {
+      if (w + rlen >= sizeof(temp)) {
+        return 0;
+      }
+      memcpy(temp + w, replacement, rlen);
+      w += rlen;
+      p += nlen;
+      continue;
+    }
+    if (w + 1 >= sizeof(temp)) {
+      return 0;
+    }
+    temp[w++] = *p++;
+  }
+  temp[w] = '\0';
+
+  if (w >= buf_size) {
+    return 0;
+  }
+  memcpy(buf, temp, w + 1);
+  return 1;
+}
+
+static void extract_service_and_title(const char *name, char *service,
+                                      size_t service_size, char *title,
+                                      size_t title_size) {
+  if (service == NULL || service_size == 0 || title == NULL || title_size == 0) {
+    return;
+  }
+  service[0] = '\0';
+  title[0] = '\0';
+  if (name == NULL || name[0] == '\0') {
+    snprintf(service, service_size, "General");
+    snprintf(title, title_size, "Task");
+    return;
+  }
+
+  if (name[0] == '[') {
+    const char *end = strchr(name, ']');
+    if (end != NULL && end > name + 1) {
+      size_t len = (size_t)(end - (name + 1));
+      if (len >= service_size) {
+        len = service_size - 1;
+      }
+      memcpy(service, name + 1, len);
+      service[len] = '\0';
+      const char *rest = end + 1;
+      while (*rest != '\0' && isspace((unsigned char)*rest)) {
+        rest++;
+      }
+      snprintf(title, title_size, "%s", *rest != '\0' ? rest : name);
+      return;
+    }
+  }
+
+  snprintf(service, service_size, "General");
+  snprintf(title, title_size, "%s", name);
+}
+
+static const char *priority_to_text(Priority p) {
+  switch (p) {
+  case HIGH:
+    return "high";
+  case MEDIUM:
+    return "medium";
+  case LOW:
+  default:
+    return "low";
+  }
+}
+
+static void tags_pipe_to_csv(const char *tags, char *out, size_t out_size) {
+  if (out == NULL || out_size == 0) {
+    return;
+  }
+  out[0] = '\0';
+  if (tags == NULL || tags[0] == '\0') {
+    return;
+  }
+
+  size_t w = 0;
+  for (size_t i = 0; tags[i] != '\0' && w + 1 < out_size; i++) {
+    char ch = tags[i];
+    if (ch == '|') {
+      if (w + 2 >= out_size) {
+        break;
+      }
+      out[w++] = ',';
+      out[w++] = ' ';
+      continue;
+    }
+    out[w++] = ch;
+  }
+  out[w] = '\0';
+}
+
+static int write_context_template_file(const Task *task, const char *file_path) {
+  if (task == NULL || file_path == NULL || file_path[0] == '\0') {
+    return 0;
+  }
+
+  struct stat st;
+  if (stat(file_path, &st) == 0 && st.st_size > 0) {
+    return 1;
+  }
+
+  char template_buf[16384];
+  if (!read_file_to_buffer("ContextTemplate.md", template_buf,
+                           sizeof(template_buf))) {
+    snprintf(
+        template_buf, sizeof(template_buf),
+        "---\n"
+        "title: \"[%s] %s\"\n"
+        "status: %s\n"
+        "priority: %s\n"
+        "points: %d\n"
+        "tags: [%s]\n"
+        "ticket: %s\n"
+        "project: %s\n"
+        "created: %s\n"
+        "---\n\n"
+        "%s\n",
+        "General", task->name, task->phase, priority_to_text(task->priority),
+        task->points, task->tags, task->ticket, task->project, "", task->description);
+  }
+
+  char service[64];
+  char title[128];
+  char points[16];
+  char date[16];
+  char tags_csv[256];
+  extract_service_and_title(task->name, service, sizeof(service), title,
+                            sizeof(title));
+  snprintf(points, sizeof(points), "%d", task->points);
+  tags_pipe_to_csv(task->tags, tags_csv, sizeof(tags_csv));
+
+  time_t now = time(NULL);
+  struct tm tm_now;
+  localtime_r(&now, &tm_now);
+  strftime(date, sizeof(date), "%Y-%m-%d", &tm_now);
+
+  if (!replace_all(template_buf, sizeof(template_buf), "{{Service}}", service) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{Title}}", title) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{Titile}}", title) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{status}}",
+                   task->phase[0] != '\0' ? task->phase : "Backlog") ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { status } }",
+                   task->phase[0] != '\0' ? task->phase : "Backlog") ||
+      !replace_all(template_buf, sizeof(template_buf), "{{priority}}",
+                   priority_to_text(task->priority)) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { priority } }",
+                   priority_to_text(task->priority)) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{Point}}", points) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{points}}", points) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { Point } }", points) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{date}}", date) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { date } }", date) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{tags}}", tags_csv) ||
+      !replace_all(template_buf, sizeof(template_buf), "{ { tags } }",
+                   tags_csv) ||
+      !replace_all(template_buf, sizeof(template_buf), "{{ticket}}",
+                   task->ticket)) {
+    return 0;
+  }
+
+  FILE *f = fopen(file_path, "w");
+  if (f == NULL) {
+    return 0;
+  }
+  size_t len = strlen(template_buf);
+  int ok = fwrite(template_buf, 1, len, f) == len;
+  fclose(f);
+  return ok;
+}
+
+static int ensure_context_file_seeded(const Task *task, const char *raw_path) {
+  if (task == NULL || is_missing_context_path(raw_path)) {
+    return 0;
+  }
+
+  char resolved_file[MAX_PATH];
+  if (!resolve_open_path(raw_path, resolved_file, sizeof(resolved_file))) {
+    return 0;
+  }
+
+  char parent[MAX_PATH];
+  char file_name[MAX_PATH];
+  if (!split_parent_and_name(resolved_file, parent, sizeof(parent), file_name,
+                             sizeof(file_name))) {
+    return 0;
+  }
+  if (file_name[0] == '\0') {
+    return 0;
+  }
+
+  if (!ensure_dir_recursive(parent)) {
+    return 0;
+  }
+
+  return write_context_template_file(task, resolved_file);
 }
 
 static void open_context_file_target(const Task *current, const char *raw_path,
@@ -628,6 +862,11 @@ void tui_action_generate_context_path(TuiAction *action) {
       return;
     }
     persist(action->state);
+  }
+
+  if (!ensure_context_file_seeded(current, current->context_path)) {
+    tui_show_status_message("Failed to apply ContextTemplate.md to context.");
+    return;
   }
 
   open_context_file_target(current, current->context_path,

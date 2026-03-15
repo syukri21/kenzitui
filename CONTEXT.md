@@ -85,6 +85,7 @@ Build portability:
 - `o`: expands `~` path to `$HOME` and opens Neovim at task path as working directory.
 - `O`: opens task `context_path` as a file in Neovim.
 - `0`: if `context_path` is empty/`-`, generate then persist and open note file; if already set, open directly.
+- `0` also seeds new/empty note file from `ContextTemplate.md` before opening.
 - In tmux, `o` reuses an existing pane if the same path is already open; otherwise it creates a new tmux window.
 - Mutating actions persist immediately to `tasks.dat` (autosave), not only on quit.
 - Save flow also maintains `tasks.dat.bak` backup before overwriting.
@@ -93,6 +94,10 @@ Context root source order for generation (`0`):
 1. `OBSIDIAN_PATH` env var
 2. `KENZITUI_OBSIDIAN_PATH` env var
 3. `.env` (`OBSIDIAN_PATH=` or `KENZITUI_OBSIDIAN_PATH=`)
+
+Context note template behavior:
+- Template file path: project root `ContextTemplate.md`.
+- On `0`, if target context file is empty/new, template placeholders are replaced from selected task data.
 
 ## Runtime State Model
 - `AppState` is the single source of truth for interactive mode:
